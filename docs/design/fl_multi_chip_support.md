@@ -1,5 +1,7 @@
 # FL Multi-Chip Support Architecture Design
 
+Last updated: 12/02/2026.
+
 ## Overview
 
 This document describes the FL (FlagOS) multi-chip support architecture in verl, enabling training and inference on diverse hardware platforms through FlagGems, FlagCX, TransformerEngine-FL, and vllm-plugin-FL.
