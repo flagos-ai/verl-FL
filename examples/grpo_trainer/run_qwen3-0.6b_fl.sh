@@ -32,9 +32,9 @@ export TE_FL_STRICT=0	# Strict mode (no fallback)	1 / 0	0
 export TEFL_LOG_LEVEL=DEBUG # / INFO / WARNING / ERROR	INF
 
 # Rollout phase environment variables (set by FLEnvManager.apply_rollout_env):
-export VLLM_FL_PREFER_ENABLED=true
+# export VLLM_FL_PREFER_ENABLED=true
 # export VLLM_FL_PLATFORM=cuda # will cause error
-export VLLM_FL_PREFER=flagos
+# export VLLM_FL_PREFER=flagos
 export USE_FLAGGEMS=true
 export VLLM_FL_OOT_ENABLED=1
 export USE_FLAGCX=1

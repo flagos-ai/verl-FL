@@ -47,7 +47,7 @@ except ImportError:
 
 ## The FL (FlagOS) multi-chip support engines are imported in a separate try-except block
 try:
-    from .fsdp_fl.transformer_impl import FSDPEngineWithLMHead, FSDPFLEngineWithValueHead
+    from .fsdp_fl.transformer_impl import FSDPFLEngineWithLMHead, FSDPFLEngineWithValueHead
 
     __all__ += ["FSDPFLEngineWithLMHead", "FSDPFLEngineWithValueHead"]
 except ImportError:
