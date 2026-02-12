@@ -1,16 +1,4 @@
-# Copyright 2025 FlagOS Team & Bytedance Ltd. and/or its affiliates
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (c) 2026 BAAI. All rights reserved.
 
 """FL Environment Manager for verl.
 
@@ -67,8 +55,7 @@ Usage:
 
 import logging
 import os
-from contextlib import contextmanager
-from typing import Dict, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +106,7 @@ class FLEnvManager:
     ]
 
     # Internal state for context management
-    _saved_env: Dict[str, Optional[str]] = {}
+    _saved_env: dict[str, Optional[str]] = {}
     _current_phase: Optional[str] = None
 
     @classmethod
@@ -174,7 +161,7 @@ class FLEnvManager:
         return os.environ.get("FLAGCX_PATH") is not None
 
     @classmethod
-    def get_training_env(cls) -> Dict[str, str]:
+    def get_training_env(cls) -> dict[str, str]:
         """Get all training phase FL environment variables.
 
         Returns:
@@ -188,7 +175,7 @@ class FLEnvManager:
         return env
 
     @classmethod
-    def get_rollout_env(cls) -> Dict[str, str]:
+    def get_rollout_env(cls) -> dict[str, str]:
         """Get all rollout phase FL environment variables.
 
         Returns:
@@ -214,8 +201,9 @@ class FLEnvManager:
         if phase == "training":
             whitelist_str = os.environ.get("TRAINING_FL_FLAGOS_WHITELIST", "")
         else:
-            whitelist_str = os.environ.get("ROLLOUT_FL_FLAGOS_WHITELIST", "") or \
-                           os.environ.get("VLLM_FL_FLAGOS_WHITELIST", "")
+            whitelist_str = os.environ.get("ROLLOUT_FL_FLAGOS_WHITELIST", "") or os.environ.get(
+                "VLLM_FL_FLAGOS_WHITELIST", ""
+            )
 
         if whitelist_str:
             return [op.strip() for op in whitelist_str.split(",") if op.strip()]
@@ -234,8 +222,9 @@ class FLEnvManager:
         if phase == "training":
             blacklist_str = os.environ.get("TRAINING_FL_FLAGOS_BLACKLIST", "")
         else:
-            blacklist_str = os.environ.get("ROLLOUT_FL_FLAGOS_BLACKLIST", "") or \
-                           os.environ.get("VLLM_FL_FLAGOS_BLACKLIST", "")
+            blacklist_str = os.environ.get("ROLLOUT_FL_FLAGOS_BLACKLIST", "") or os.environ.get(
+                "VLLM_FL_FLAGOS_BLACKLIST", ""
+            )
 
         if blacklist_str:
             return [op.strip() for op in blacklist_str.split(",") if op.strip()]

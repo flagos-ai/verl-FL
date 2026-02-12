@@ -15,6 +15,7 @@
 The abstract base class defining the interface for model training engines.
 """
 
+import os
 from abc import abstractmethod
 from typing import Any, Callable, Generator, Optional
 
@@ -23,7 +24,7 @@ from tensordict import TensorDict
 
 from verl.utils.device import get_device_name
 
-import os
+
 class BaseEngine:
     """
     Abstract base class defining the interface for model training engines. Interface is subject to

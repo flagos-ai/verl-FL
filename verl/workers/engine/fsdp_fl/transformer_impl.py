@@ -1,4 +1,8 @@
-# Copyright 2025 FlagOS Team & Bytedance Ltd. and/or its affiliates
+# Copyright (c) 2026 BAAI. All rights reserved.
+# Adapted from https://github.com/verl-project/verl/blob/main/verl/workers/engine/fsdp/transformer_impl.py
+# Below is the original copyright:
+
+# Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,11 +37,10 @@ Environment variables (managed by FLEnvManager):
 
 import logging
 import os
-from typing import Optional
 
 from verl.trainer.config import CheckpointConfig
-from verl.workers.config import FSDPEngineConfig, FSDPOptimizerConfig, HFModelConfig
 from verl.utils.fl import FLEnvManager
+from verl.workers.config import FSDPEngineConfig, FSDPOptimizerConfig, HFModelConfig
 
 from ..base import EngineRegistry
 from ..fsdp import FSDPEngineWithLMHead
@@ -46,7 +49,6 @@ from ..megatron_fl.transformer_impl import may_enable_flag_gems
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
-
 
 
 @EngineRegistry.register(model_type="language_model", backend=["fsdp", "fsdp2"], device="flagos")

@@ -1,4 +1,8 @@
-# Copyright 2025 FlagOS Team & Bytedance Ltd. and/or its affiliates
+# Copyright (c) 2026 BAAI. All rights reserved.
+# Adapted from http://github.com/verl-project/verl/blob/main/verl/workers/engine/megatron/transformer_impl.py
+# Below is the original copyright:
+
+# Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,8 +37,8 @@ import logging
 import os
 
 from verl.trainer.config import CheckpointConfig
-from verl.workers.config import HFModelConfig, McoreEngineConfig, McoreOptimizerConfig
 from verl.utils.fl import FLEnvManager
+from verl.workers.config import HFModelConfig, McoreEngineConfig, McoreOptimizerConfig
 
 from ..base import EngineRegistry
 from ..megatron import MegatronEngineWithLMHead
@@ -66,7 +70,7 @@ def may_enable_flag_gems(phase: str = "training"):
     import sys
 
     # Check if FlagGems is already imported
-    if 'flag_gems' in sys.modules:
+    if "flag_gems" in sys.modules:
         logger.info("FlagGems is already imported, skipping re-import")
         return
 
@@ -84,10 +88,7 @@ def may_enable_flag_gems(phase: str = "training"):
 
         # Validate: whitelist and blacklist are mutually exclusive
         if whitelist and blacklist:
-            raise ValueError(
-                f"Cannot set both whitelist and blacklist for {phase} phase. "
-                "Please set only one of them."
-            )
+            raise ValueError(f"Cannot set both whitelist and blacklist for {phase} phase. Please set only one of them.")
 
         # Determine record path based on phase
         if phase == "training":
@@ -124,8 +125,7 @@ def may_enable_flag_gems(phase: str = "training"):
 
     except ImportError:
         logger.warning(
-            "FlagGems is not available but USE_FLAGGEMS is set. "
-            "Please install FlagGems: pip install flag-gems"
+            "FlagGems is not available but USE_FLAGGEMS is set. Please install FlagGems: pip install flag-gems"
         )
 
 
@@ -173,7 +173,6 @@ class MegatronFLEngineWithLMHead(MegatronEngineWithLMHead):
         # Check FlagCX configuration
         if FLEnvManager.is_flagcx_enabled():
             logger.info(f"FlagCX communication is enabled (path: {os.environ.get('FLAGCX_PATH', 'N/A')})")
-
 
     def initialize(self):
         """Initialize the FL engine with optimized settings."""

@@ -54,8 +54,8 @@ except ImportError:
     FSDPFLEngineWithLMHead = None
     FSDPFLEngineWithValueHead = None
 try:
-    from .megatron_fl.transformer_impl import  MegatronFLEngineWithLMHead
+    from .megatron_fl.transformer_impl import MegatronFLEngineWithLMHead
+
     __all__ += ["MegatronFLEngineWithLMHead"]
 except ImportError:
     MegatronFLEngineWithLMHead = None
-
