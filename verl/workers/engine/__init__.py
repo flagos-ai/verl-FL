@@ -44,3 +44,18 @@ try:
 except ImportError:
     MegatronEngine = None
     MegatronEngineWithLMHead = None
+
+## The FL (FlagOS) multi-chip support engines are imported in a separate try-except block
+try:
+    from .fsdp_fl.transformer_impl import FSDPEngineWithLMHead, FSDPFLEngineWithValueHead
+
+    __all__ += ["FSDPFLEngineWithLMHead", "FSDPFLEngineWithValueHead"]
+except ImportError:
+    FSDPFLEngineWithLMHead = None
+    FSDPFLEngineWithValueHead = None
+try:
+    from .megatron_fl.transformer_impl import  MegatronFLEngineWithLMHead
+    __all__ += ["MegatronFLEngineWithLMHead"]
+except ImportError:
+    MegatronFLEngineWithLMHead = None
+

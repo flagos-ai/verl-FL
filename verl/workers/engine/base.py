@@ -23,7 +23,7 @@ from tensordict import TensorDict
 
 from verl.utils.device import get_device_name
 
-
+import os
 class BaseEngine:
     """
     Abstract base class defining the interface for model training engines. Interface is subject to
@@ -301,6 +301,8 @@ class EngineRegistry:
         assert model_type in cls._engines, f"Unknown model_type: {model_type}"
         assert backend in cls._engines[model_type], f"Unknown backend: {backend}"
         device = get_device_name()
+        if os.environ.get("TE_FL_PREFER", "") == "flagos":
+            device = os.environ["TE_FL_PREFER"]
         assert device in cls._engines[model_type][backend], (
             f"Unknown device: {device} for model_type: {model_type} and backend: {backend}"
         )
