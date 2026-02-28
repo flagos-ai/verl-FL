@@ -22,16 +22,16 @@ This document describes the FL (FlagOS) multi-chip support architecture in verl,
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                         FLEnvManager                                      │   │
-│  │   Unified environment variable management for Training & Rollout phases   │   │
+│  │                         FLEnvManager                                    │   │
+│  │   Unified environment variable management for Training & Rollout phases │   │
 │  └─────────────────────────────────────────────────────────────────────────┘   │
-│                          │                              │                        │
+│                          │                             │                       │
 │            ┌─────────────▼─────────────┐  ┌────────────▼────────────┐          │
 │            │     Training Phase        │  │     Rollout Phase       │          │
 │            │                           │  │                         │          │
 │            │  ┌─────────────────────┐  │  │  ┌───────────────────┐  │          │
 │            │  │ MegatronFLEngine    │  │  │  │ vLLM + plugin-FL  │  │          │
-│            │  │ ├─ TransformerEngine│  │  │  │ ├─ VLLM_FL_*      │  │          │
+│            │  │ ├─ TransformerEngine│  │  │  │ ├─ vllm_plugin-FL │  │          │
 │            │  │ │  -FL (TE-FL)      │  │  │  │ ├─ FlagGems       │  │          │
 │            │  │ ├─ FlagGems         │  │  │  │ └─ FlagCX         │  │          │
 │            │  │ └─ FlagCX           │  │  │  └───────────────────┘  │          │
@@ -115,6 +115,8 @@ Rollout uses vllm-plugin-FL or sglang-plugin-FL for multi-chip inference support
 | `TRAINING_FL_FLAGOS_BLACKLIST` | FlagGems operator blacklist | `layernorm` | - |
 | `TRAINING_FLAGGEMS_PATH` | FlagGems record path | `/path/to/record` | - |
 
+You can see a more detailed reference from [vllm-plugin-fl](https://github.com/flagos-ai/vllm-plugin-FL/blob/main/vllm_fl/dispatch/README.md#environment-variables)
+
 ### Rollout Phase
 
 | Variable | Description | Values | Default |
@@ -125,6 +127,8 @@ Rollout uses vllm-plugin-FL or sglang-plugin-FL for multi-chip inference support
 | `VLLM_FL_OOT_ENABLED` | Enable out-of-tree plugins | `1` / `0` | `0` |
 | `VLLM_FL_FLAGOS_WHITELIST` | FlagGems operator whitelist | `mm,bmm` | - |
 | `VLLM_FL_FLAGOS_BLACKLIST` | FlagGems operator blacklist | `layernorm` | - |
+
+You can see a more detailed reference from [te-fl](https://github.com/flagos-ai/TransformerEngine-FL/pull/4)
 
 ### Common
 
@@ -307,7 +311,7 @@ verl/
 │           ├── __init__.py
 │           └── transformer_impl.py  # FSDPFLEngineWithLMHead/ValueHead
 └── docs/
-    └── design/
+    └── flagos/
         └── fl_multi_chip_support.md  # This document
 ```
 
