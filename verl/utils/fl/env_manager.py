@@ -16,7 +16,6 @@ Training Phase (TE-FL / Megatron / FSDP):
     TEFL_LOG_LEVEL: Log level (DEBUG/INFO/WARNING/ERROR)
     TRAINING_FL_FLAGOS_WHITELIST: FlagGems operator whitelist for training
     TRAINING_FL_FLAGOS_BLACKLIST: FlagGems operator blacklist for training
-    TRAINING_FLAGGEMS_PATH: FlagGems record path for training
 
 Rollout Phase (vLLM / SGLang):
     VLLM_FL_PREFER_ENABLED: Enable FL preference (true/false)
@@ -25,8 +24,6 @@ Rollout Phase (vLLM / SGLang):
     VLLM_FL_OOT_ENABLED: Enable out-of-tree plugins (1/0)
     VLLM_FL_FLAGOS_WHITELIST: FlagGems operator whitelist for rollout
     VLLM_FL_FLAGOS_BLACKLIST: FlagGems operator blacklist for rollout
-    ROLLOUT_FL_FLAGOS_WHITELIST: Alias for VLLM_FL_FLAGOS_WHITELIST
-    ROLLOUT_FL_FLAGOS_BLACKLIST: Alias for VLLM_FL_FLAGOS_BLACKLIST
 
 Common:
     USE_FLAGGEMS: Enable FlagGems globally (true/false/1/0)
@@ -80,7 +77,6 @@ class FLEnvManager:
         # Training FlagGems configuration
         "TRAINING_FL_FLAGOS_WHITELIST",
         "TRAINING_FL_FLAGOS_BLACKLIST",
-        "TRAINING_FLAGGEMS_PATH",
     ]
 
     # Rollout phase environment variable keys
@@ -92,10 +88,6 @@ class FLEnvManager:
         "VLLM_FL_OOT_ENABLED",
         "VLLM_FL_FLAGOS_WHITELIST",
         "VLLM_FL_FLAGOS_BLACKLIST",
-        # Rollout FlagGems configuration (alias)
-        "ROLLOUT_FL_FLAGOS_WHITELIST",
-        "ROLLOUT_FL_FLAGOS_BLACKLIST",
-        "ROLLOUT_FLAGGEMS_PATH",
     ]
 
     # Common environment variable keys
@@ -201,9 +193,7 @@ class FLEnvManager:
         if phase == "training":
             whitelist_str = os.environ.get("TRAINING_FL_FLAGOS_WHITELIST", "")
         else:
-            whitelist_str = os.environ.get("ROLLOUT_FL_FLAGOS_WHITELIST", "") or os.environ.get(
-                "VLLM_FL_FLAGOS_WHITELIST", ""
-            )
+            whitelist_str = os.environ.get("VLLM_FL_FLAGOS_WHITELIST", "")
 
         if whitelist_str:
             return [op.strip() for op in whitelist_str.split(",") if op.strip()]
@@ -222,9 +212,7 @@ class FLEnvManager:
         if phase == "training":
             blacklist_str = os.environ.get("TRAINING_FL_FLAGOS_BLACKLIST", "")
         else:
-            blacklist_str = os.environ.get("ROLLOUT_FL_FLAGOS_BLACKLIST", "") or os.environ.get(
-                "VLLM_FL_FLAGOS_BLACKLIST", ""
-            )
+            blacklist_str = os.environ.get("VLLM_FL_FLAGOS_BLACKLIST", "")
 
         if blacklist_str:
             return [op.strip() for op in blacklist_str.split(",") if op.strip()]

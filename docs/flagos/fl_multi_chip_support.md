@@ -113,7 +113,6 @@ Rollout uses vllm-plugin-FL or sglang-plugin-FL for multi-chip inference support
 | `TEFL_LOG_LEVEL` | TE-FL log level | `DEBUG` / `INFO` / `WARNING` / `ERROR` | `INFO` |
 | `TRAINING_FL_FLAGOS_WHITELIST` | FlagGems operator whitelist | `mm,bmm,softmax` | - |
 | `TRAINING_FL_FLAGOS_BLACKLIST` | FlagGems operator blacklist | `layernorm` | - |
-| `TRAINING_FLAGGEMS_PATH` | FlagGems record path | `/path/to/record` | - |
 
 You can see a more detailed reference from [vllm-plugin-fl](https://github.com/flagos-ai/vllm-plugin-FL/blob/main/vllm_fl/dispatch/README.md#environment-variables)
 
@@ -181,8 +180,8 @@ export VLLM_FL_PREFER=flagos        # Backend: flagos / vendor
 export VLLM_FL_OOT_ENABLED=1        # Enable out-of-tree plugins
 
 # FlagGems operator control for rollout (optional)
-# export ROLLOUT_FL_FLAGOS_WHITELIST=mm,bmm
-# export ROLLOUT_FL_FLAGOS_BLACKLIST=layernorm
+# export VLLM_FL_FLAGOS_WHITELIST=mm,bmm
+# export VLLM_FL_FLAGOS_BLACKLIST=layernorm
 
 # ============ Common Configuration ============
 export USE_FLAGGEMS=true            # Enable FlagGems globally
