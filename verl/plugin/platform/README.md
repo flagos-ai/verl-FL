@@ -8,7 +8,7 @@ directly.  Instead, all device-specific logic is routed through a
 ## Quick Start
 
 ```python
-from verl.utils.platform import get_platform
+from verl.plugin.platform import get_platform
 
 platform = get_platform()            # auto-detected singleton
 platform.manual_seed(42)
@@ -26,7 +26,7 @@ VERL_PLATFORM=cpu python train.py    # force CPU even if GPU is present
 ## Package Structure
 
 ```
-verl/utils/platform/
+verl/plugin/platform/
 ├── __init__.py            # Public API: get_platform, set_platform, PlatformBase
 ├── platform_base.py       # ABC – all methods a backend must implement
 ├── platform_cuda.py       # NVIDIA CUDA implementation
@@ -42,7 +42,7 @@ To add support for a new backend (e.g. Intel XPU, AMD ROCm, Cambricon MLU):
 
 ### Step 1 — Create the platform file
 
-Create `verl/utils/platform/platform_xpu.py` (replace `xpu` with your backend
+Create `verl/plugin/platform/platform_xpu.py` (replace `xpu` with your backend
 name):
 
 ```python
@@ -160,7 +160,7 @@ If you prefer not to modify `platform_manager.py`, you can register a custom
 platform at startup before any other verl code runs:
 
 ```python
-from verl.utils.platform import set_platform
+from verl.plugin.platform import set_platform
 from my_backend import MyPlatform
 
 set_platform(MyPlatform())

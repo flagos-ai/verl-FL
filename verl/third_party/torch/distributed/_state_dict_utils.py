@@ -476,7 +476,7 @@ def _create_cpu_state_dict(
             t = torch.empty(*tuple(obj.size()), dtype=obj.dtype)
             t = t.share_memory_()
             if pin_memory:
-                from verl.utils.platform import get_platform
+                from verl.plugin.platform import get_platform
 
                 _cudart = get_platform().cudart()
                 if _cudart is not None:

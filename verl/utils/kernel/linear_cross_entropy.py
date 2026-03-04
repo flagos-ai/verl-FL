@@ -34,7 +34,7 @@ import typing
 import torch
 import torch.distributed as dist
 
-from verl.utils.platform import get_platform
+from verl.plugin.platform import get_platform
 
 
 class LinearCrossEntropy(torch.autograd.Function):

@@ -3,7 +3,7 @@
 
 Usage::
 
-    from verl.utils.platform import get_platform
+    from verl.plugin.platform import get_platform
 
     platform = get_platform()          # auto-detected singleton
     platform.manual_seed(42)

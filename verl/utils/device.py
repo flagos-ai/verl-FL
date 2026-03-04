@@ -12,14 +12,14 @@
 
 All public names in this module are preserved for existing callers (80+ import
 sites).  Internally every function now delegates to the platform abstraction
-layer in :mod:`verl.utils.platform`.
+layer in :mod:`verl.plugin.platform`.
 """
 
 import logging
 
 import torch
 
-from verl.utils.platform import get_platform
+from verl.plugin.platform import get_platform
 
 logger = logging.getLogger(__name__)
 
