@@ -29,8 +29,17 @@ def _detect_platform_name() -> str:
     # 1. Explicit user override via environment variable
     env_name = os.environ.get("VERL_PLATFORM", "").strip().lower()
     if env_name:
-        logger.info("Platform override from VERL_PLATFORM=%s", env_name)
-        return env_name
+        if env_name not in _BUILTIN_PLATFORMS:
+            logger.warning(
+                "Invalid VERL_PLATFORM='%s', must be one of %s. "
+                "Falling back to auto-detection.",
+                env_name,
+                _BUILTIN_PLATFORMS,
+            )
+            env_name = ""
+        else:
+            logger.info("Platform override from VERL_PLATFORM=%s", env_name)
+            return env_name
 
     # 2. Auto-detect CUDA
     try:
@@ -59,12 +68,28 @@ def _create_platform(name: str) -> PlatformBase:
     if name == "cuda":
         from .platform_cuda import PlatformCUDA
 
-        return PlatformCUDA()
+        platform = PlatformCUDA()
+        if not platform.is_available():
+            logger.warning(
+                "CUDA platform specified but not available. Falling back to CPU."
+            )
+            from .platform_cpu import PlatformCPU
+
+            return PlatformCPU()
+        return platform
 
     if name == "npu":
         from .platform_npu import PlatformNPU
 
-        return PlatformNPU()
+        platform = PlatformNPU()
+        if not platform.is_available():
+            logger.warning(
+                "NPU platform specified but not available. Falling back to CPU."
+            )
+            from .platform_cpu import PlatformCPU
+
+            return PlatformCPU()
+        return platform
 
     if name == "cpu":
         from .platform_cpu import PlatformCPU

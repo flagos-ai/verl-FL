@@ -1,6 +1,7 @@
 # Copyright (c) BAAI Corporation.
 """Huawei Ascend NPU platform implementation."""
 
+import logging
 from contextlib import contextmanager
 from types import ModuleType
 from typing import Any, Optional
@@ -8,6 +9,8 @@ from typing import Any, Optional
 import torch
 
 from .platform_base import PlatformBase
+
+logger = logging.getLogger(__name__)
 
 
 class PlatformNPU(PlatformBase):
@@ -86,7 +89,8 @@ class PlatformNPU(PlatformBase):
 
     @contextmanager
     def nvtx_range(self, msg: str):
-        # NPU does not have an NVTX equivalent; no-op.
+        # NPU does not have an NVTX equivalent, but we log for debugging
+        logger.debug("NVTX range (no-op on NPU): %s", msg)
         yield
 
     def profiler_start(self) -> None:

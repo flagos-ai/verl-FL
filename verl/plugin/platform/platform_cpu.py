@@ -33,7 +33,13 @@ class PlatformCPU(PlatformBase):
         return int(os.environ.get("LOCAL_RANK", 0))
 
     def device_count(self) -> int:
-        return int(os.environ.get("LOCAL_SIZE", 0))
+        # Prioritize LOCAL_SIZE environment variable if set
+        if "LOCAL_SIZE" in os.environ:
+            return int(os.environ.get("LOCAL_SIZE"))
+
+        # Fallback to actual CPU count, minimum of 1
+        cpu_count = os.cpu_count()
+        return cpu_count if cpu_count is not None else 1
 
     def set_device(self, device_index: int) -> None:
         pass
