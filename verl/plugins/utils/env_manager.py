@@ -268,3 +268,89 @@ class FLEnvManager:
         if parts:
             return f"FL[{', '.join(parts)}]"
         return "FL[disabled]"
+
+
+def may_enable_flag_gems(phase: str = "training"):
+    """Enable FlagGems operators based on FLEnvManager configuration.
+
+    This function checks if FlagGems is available and enables it with the
+    appropriate whitelist/blacklist configuration for the specified phase.
+
+    Args:
+        phase: Either "training" or "rollout". Determines which whitelist/blacklist
+               environment variables to use. Defaults to "training".
+
+    Environment Variables (for training phase):
+        TRAINING_FL_FLAGOS_WHITELIST: Comma-separated list of ops to enable
+        TRAINING_FL_FLAGOS_BLACKLIST: Comma-separated list of ops to disable
+        TRAINING_FLAGGEMS_PATH: Path to save FlagGems records
+
+    Environment Variables (for rollout phase):
+        ROLLOUT_FL_FLAGOS_WHITELIST / VLLM_FL_FLAGOS_WHITELIST: Ops to enable
+        ROLLOUT_FL_FLAGOS_BLACKLIST / VLLM_FL_FLAGOS_BLACKLIST: Ops to disable
+        ROLLOUT_FLAGGEMS_PATH: Path to save FlagGems records
+    """
+    import sys
+
+    # TODO: We must ensure FlagGems is only enabled once per process. This is before vllm-plugin-FL,
+    # so we can't enable flag_gems here.
+    return
+
+    # Check if FlagGems is already imported
+    if "flag_gems" in sys.modules:
+        logger.info("FlagGems is already imported, skipping re-import")
+        return
+
+    # Check if FlagGems is enabled via FLEnvManager
+    if not FLEnvManager.is_flaggems_enabled():
+        logger.debug("FlagGems is not enabled (USE_FLAGGEMS not set)")
+        return
+
+    try:
+        import flag_gems
+
+        # Get whitelist and blacklist from FLEnvManager
+        whitelist = FLEnvManager.get_flaggems_whitelist(phase=phase)
+        blacklist = FLEnvManager.get_flaggems_blacklist(phase=phase)
+
+        # Validate: whitelist and blacklist are mutually exclusive
+        if whitelist and blacklist:
+            raise ValueError(f"Cannot set both whitelist and blacklist for {phase} phase. Please set only one of them.")
+
+        # Determine record path based on phase
+        if phase == "training":
+            record_path = os.environ.get("TRAINING_FLAGGEMS_PATH")
+        else:
+            record_path = os.environ.get("ROLLOUT_FLAGGEMS_PATH")
+
+        # Enable FlagGems with appropriate configuration
+        if whitelist:
+            logger.info(f"[FlagGems][{phase}] Enable only the following ops: {whitelist}")
+            flag_gems.only_enable(
+                include=whitelist,
+                record=True,
+                once=True,
+                path=record_path,
+            )
+        elif blacklist:
+            logger.info(f"[FlagGems][{phase}] Disable the following ops: {blacklist}")
+            flag_gems.enable(
+                unused=blacklist,
+                record=True,
+                once=True,
+                path=record_path,
+            )
+        else:
+            logger.info(f"[FlagGems][{phase}] Enable all ops")
+            flag_gems.enable(
+                record=True,
+                once=True,
+                path=record_path,
+            )
+
+        logger.info(f"FlagGems version: {flag_gems.__version__}")
+
+    except ImportError:
+        logger.warning(
+            "FlagGems is not available but USE_FLAGGEMS is set. Please install FlagGems: pip install flag-gems"
+        )

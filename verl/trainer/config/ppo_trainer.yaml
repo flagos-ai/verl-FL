@@ -315,6 +315,11 @@ ray_kwargs:
 
     # Number of CPUs for Ray. Use a fixed number instead of null when using SLURM.
     num_cpus: null
+    runtime_env:
+      env_vars: 
+        # RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO: "0"
+        CUDA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"
+        VLLM_PLUGINS: ""
 
   # Path to save Ray timeline JSON for performance profiling
   timeline_json_file: null

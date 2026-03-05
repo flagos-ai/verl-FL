@@ -629,4 +629,8 @@ transfer_queue:
 ray_kwargs:
   ray_init:
     num_cpus: null
+    runtime_env:
+      env_vars:
+        CUDA_VISIBLE_DEVICES: 0,1,2,3,4,5,6,7
+        VLLM_PLUGINS: ''
   timeline_json_file: null

@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .transformer_impl import MegatronFLEngineWithLMHead, may_enable_flag_gems
+from .transformer_impl import MegatronFLEngineWithLMHead
 
-__all__ = ["MegatronFLEngineWithLMHead", "may_enable_flag_gems"]
+__all__ = ["MegatronFLEngineWithLMHead"]

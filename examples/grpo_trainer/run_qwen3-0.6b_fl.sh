@@ -19,7 +19,8 @@ export HYDRA_FULL_ERROR=1
 # Note: Environment variables below are for reference only.
 # In verl FL architecture, these are set dynamically by FLEnvManager
 # based on fl_config YAML configuration.
-
+export RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+export VERL_ENGINE_DEVICE=flagos
 # Training phase environment variables (set by FLEnvManager.apply_training_env):
 export TE_FL_PREFER=flagos	#flagos / vendor / reference	flagos
 export TE_FL_PREFER_VENDOR=0	# Prefer vendor (legacy)	1 / 0	0
@@ -27,11 +28,13 @@ export TE_FL_STRICT=0	# Strict mode (no fallback)	1 / 0	0
 # TE_FL_ALLOW_VENDORS=nvidia,amd	# Allowed vendors (whitelist)	nvidia,amd
 # TE_FL_DENY_VENDORS=vendor_a	# Denied vendors (blacklist)	vendor_a
 # TE_FL_PER_OP=rmsnorm_fwd=vendor:cuda|default
+export VLLM_FL_FLAGOS_BLACKLIST="where_scalar_other, where_scalar_self, where_self, where_self_out, pad"
 # Logging
 # Variable	Description	Values	Default
 export TEFL_LOG_LEVEL=DEBUG # / INFO / WARNING / ERROR	INF
 
 # Rollout phase environment variables (set by FLEnvManager.apply_rollout_env):
+# export VLLM_PLUGINS=""
 # export VLLM_FL_PREFER_ENABLED=true
 # export VLLM_FL_PLATFORM=cuda # will cause error
 # export VLLM_FL_PREFER=flagos

@@ -36,13 +36,11 @@ Environment variables (managed by FLEnvManager):
 import logging
 import os
 
+from verl.plugins.utils import FLEnvManager, may_enable_flag_gems
 from verl.trainer.config import CheckpointConfig
-from verl.utils.fl import FLEnvManager
 from verl.workers.config import HFModelConfig, McoreEngineConfig, McoreOptimizerConfig
-
-from ..base import EngineRegistry
-from ..fsdp_fl.transformer_impl import may_enable_flag_gems
-from ..megatron import MegatronEngineWithLMHead
+from verl.workers.engine.base import EngineRegistry
+from verl.workers.engine.megatron import MegatronEngineWithLMHead
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
