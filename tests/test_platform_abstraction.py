@@ -1,6 +1,29 @@
-"""Unit tests for the platform abstraction layer."""
+"""Unit tests for the platform abstraction layer.
+
+We pre-populate ``sys.modules`` with lightweight stubs for the top-level
+``verl`` and ``verl.plugin`` packages so that importing the platform
+sub-package does **not** trigger the heavy dependency chain pulled in by
+``verl/__init__.py`` (ray, tensordict, …).
+"""
 
 import os
+import sys
+from types import ModuleType
+
+# ---------------------------------------------------------------------------
+# Bootstrap: prevent verl.__init__ from executing (it imports ray, etc.)
+# ---------------------------------------------------------------------------
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+for _pkg, _rel in [("verl", "verl"), ("verl.plugin", os.path.join("verl", "plugin"))]:
+    if _pkg not in sys.modules:
+        _stub = ModuleType(_pkg)
+        _stub.__path__ = [os.path.join(_project_root, _rel)]
+        _stub.__package__ = _pkg
+        sys.modules[_pkg] = _stub
+
+# ---------------------------------------------------------------------------
+
 import pytest
 from unittest import mock
 
