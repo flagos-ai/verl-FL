@@ -8,7 +8,7 @@ This document describes the FL (FlagOS) multi-chip support architecture in verl,
 
 ## Design Principles
 
-1. **Environment Variable Driven**: All FL configurations are controlled through environment variables, with no parameter injection into existing verl APIs. This ensures minimal code intrusion and maximum compatibility.
+1. **Environment Variable Driven+config file**: All FL configurations are controlled through environment variables or configuration files, with no parameter injection into existing verl APIs. This ensures minimal code intrusion and maximum compatibility.
 
 2. **Phase Separation**: Training and Rollout phases have independent environment variable namespaces, allowing fine-grained control over each phase's operator and communication settings.
 
@@ -68,7 +68,7 @@ A lightweight environment variable manager that provides:
 - FlagGems whitelist/blacklist retrieval per phase
 - Summary string generation for logging
 
-**Location**: `verl/utils/fl/env_manager.py`
+**Location**: `verl/utils/fl/config_manager.py`
 
 ### 2. Training Engines
 
@@ -114,7 +114,7 @@ Rollout uses vllm-plugin-FL or sglang-plugin-FL for multi-chip inference support
 | `TRAINING_FL_FLAGOS_WHITELIST` | FlagGems operator whitelist | `mm,bmm,softmax` | - |
 | `TRAINING_FL_FLAGOS_BLACKLIST` | FlagGems operator blacklist | `layernorm` | - |
 
-You can see a more detailed reference from [vllm-plugin-fl](https://github.com/flagos-ai/vllm-plugin-FL/blob/main/vllm_fl/dispatch/README.md#environment-variables)
+You can see a more detailed reference from [te-fl](https://github.com/flagos-ai/TransformerEngine-FL/pull/4), and the configuration may update.
 
 ### Rollout Phase
 
@@ -126,8 +126,9 @@ You can see a more detailed reference from [vllm-plugin-fl](https://github.com/f
 | `VLLM_FL_OOT_ENABLED` | Enable out-of-tree plugins | `1` / `0` | `0` |
 | `VLLM_FL_FLAGOS_WHITELIST` | FlagGems operator whitelist | `mm,bmm` | - |
 | `VLLM_FL_FLAGOS_BLACKLIST` | FlagGems operator blacklist | `layernorm` | - |
+| `VLLM_FL_CONFIG` | Dispatch config | `config file path` | - |
 
-You can see a more detailed reference from [te-fl](https://github.com/flagos-ai/TransformerEngine-FL/pull/4)
+You can see a more detailed reference from [vllm-plugin-fl](https://github.com/flagos-ai/vllm-plugin-FL/blob/main/vllm_fl/dispatch/README.md#environment-variables), and the configuration may update.
 
 ### Common
 

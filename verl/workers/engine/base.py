@@ -15,7 +15,6 @@
 The abstract base class defining the interface for model training engines.
 """
 
-import logging
 import os
 from abc import abstractmethod
 from typing import Any, Callable, Generator, Optional
@@ -23,9 +22,7 @@ from typing import Any, Callable, Generator, Optional
 import torch
 from tensordict import TensorDict
 
-from verl.plugins.platform import get_device_name, get_platform
-
-logger = logging.getLogger(__name__)
+from verl.utils.device import get_device_name
 
 
 class BaseEngine:
@@ -302,73 +299,16 @@ class EngineRegistry:
 
     @classmethod
     def get_engine_cls(cls, model_type: str, backend: str):
-        """Look up the engine class for *(model_type, backend)*, automatically
-        selecting the device variant from the current platform.
-
-        Resolution order:
-
-        1. **Explicit override** – ``VERL_ENGINE_DEVICE`` env-var, or the
-           legacy ``TE_FL_PREFER=flagos`` (maps to device ``"flagos"``).
-        2. **Platform auto-detect** – uses ``get_platform().info.device_name``
-           (e.g. ``"cuda"``, ``"npu"``, ``"mlu"``).
-        3. **Fallback to** ``"cuda"`` – if no engine is registered for the
-           detected device but a ``"cuda"`` variant exists, use it (many
-           non-CUDA backends are API-compatible with CUDA engines).
-        """
         assert model_type in cls._engines, f"Unknown model_type: {model_type}"
         assert backend in cls._engines[model_type], f"Unknown backend: {backend}"
-
-        available = cls._engines[model_type][backend]
-
-        # --- 1. Explicit override via environment variable ----------------
-        device_override = os.environ.get("VERL_ENGINE_DEVICE", "")
-        if not device_override and os.environ.get("TE_FL_PREFER", "") == "flagos":
-            device_override = "flagos"
-
-        if device_override:
-            if device_override in available:
-                logger.info(
-                    "Engine selected via env override: model_type=%s, backend=%s, device=%s",
-                    model_type,
-                    backend,
-                    device_override,
-                )
-                return available[device_override]
-            raise ValueError(
-                f"VERL_ENGINE_DEVICE={device_override!r} requested but no engine "
-                f"registered for (model_type={model_type!r}, backend={backend!r}, "
-                f"device={device_override!r}). Available devices: {list(available)}"
-            )
-
-        # --- 2. Auto-detect from platform ---------------------------------
-        platform = get_platform()
-        device = platform.info.device_name
-
-        if device in available:
-            logger.info(
-                "Engine auto-selected from platform: model_type=%s, backend=%s, device=%s",
-                model_type,
-                backend,
-                device,
-            )
-            return available[device]
-
-        # --- 3. Fallback to "cuda" engine ---------------------------------
-        if "cuda" in available:
-            logger.warning(
-                "No engine registered for device=%r (model_type=%s, backend=%s). "
-                "Falling back to 'cuda' engine. Available devices: %s",
-                device,
-                model_type,
-                backend,
-                list(available),
-            )
-            return available["cuda"]
-
-        raise ValueError(
-            f"No engine for device={device!r} (model_type={model_type!r}, "
-            f"backend={backend!r}). Available devices: {list(available)}"
+        device = get_device_name()
+        # TODO: use a more robust way to determine device type when multiple devices platform are supported.
+        if os.getenv("VERL_ENGINE_DEVICE", "0") == "FLAGOS":
+            device = "flagos"
+        assert device in cls._engines[model_type][backend], (
+            f"Unknown device: {device} for model_type: {model_type} and backend: {backend}"
         )
+        return cls._engines[model_type][backend][device]
 
     @classmethod
     def new(cls, model_type, backend, *args, **kwargs):

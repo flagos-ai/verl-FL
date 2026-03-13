@@ -29,25 +29,6 @@ Common:
     USE_FLAGGEMS: Enable FlagGems globally (true/false/1/0)
     USE_FLAGCX: Enable FlagCX communication (1/0)
     FLAGCX_PATH: Path to FlagCX installation
-
-Usage:
-------
-    # Check if FL is enabled
-    if FLEnvManager.is_fl_enabled():
-        # Get training environment variables
-        training_env = FLEnvManager.get_training_env()
-
-        # Get rollout environment variables
-        rollout_env = FLEnvManager.get_rollout_env()
-
-    # Use context manager for phase-specific environment
-    with FLEnvManager.training_context():
-        # Training code here, USE_FLAGGEMS points to training config
-        pass
-
-    with FLEnvManager.rollout_context():
-        # Rollout code here, USE_FLAGGEMS points to rollout config
-        pass
 """
 
 import logging
@@ -88,6 +69,7 @@ class FLEnvManager:
         "VLLM_FL_OOT_ENABLED",
         "VLLM_FL_FLAGOS_WHITELIST",
         "VLLM_FL_FLAGOS_BLACKLIST",
+        "VLLM_FL_CONFIG",  # the custom config for vLLM-FL
     ]
 
     # Common environment variable keys
