@@ -1,5 +1,5 @@
 # Copyright (c) BAAI Corporation.
-# Adopted from DeepSpeed Accelerator, https://github.com/deepspeedai/DeepSpeed/
+# Adopted from https://github.com/microsoft/DeepSpeed/blob/master/accelerator/abstract_accelerator.py
 """Abstract base class defining the platform interface for device backends.
 
 To add support for a new chip/accelerator, subclass ``PlatformBase`` and

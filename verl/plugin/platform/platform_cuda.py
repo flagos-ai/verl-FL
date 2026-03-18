@@ -1,5 +1,5 @@
 # Copyright (c) BAAI Corporation.
-# Adopted from DeepSpeed Accelerator, https://github.com/deepspeedai/DeepSpeed/
+# Adopted from https://github.com/microsoft/DeepSpeed/blob/master/accelerator/cuda_accelerator.py
 """NVIDIA CUDA platform implementation."""
 
 from contextlib import contextmanager
