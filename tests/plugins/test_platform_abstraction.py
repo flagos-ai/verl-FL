@@ -13,7 +13,7 @@ from types import ModuleType
 # ---------------------------------------------------------------------------
 # Bootstrap: prevent verl.__init__ from executing (it imports ray, etc.)
 # ---------------------------------------------------------------------------
-_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 for _pkg, _rel in [("verl", "verl"), ("verl.plugin", os.path.join("verl", "plugin"))]:
     if _pkg not in sys.modules:

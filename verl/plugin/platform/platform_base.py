@@ -1,4 +1,5 @@
 # Copyright (c) BAAI Corporation.
+# Adopted from DeepSpeed Accelerator, https://github.com/deepspeedai/DeepSpeed/
 """Abstract base class defining the platform interface for device backends.
 
 To add support for a new chip/accelerator, subclass ``PlatformBase`` and
