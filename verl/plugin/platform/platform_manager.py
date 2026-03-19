@@ -1,4 +1,4 @@
-# Copyright (c) BAAI. All rights reserved.
+# Copyright (c) 2026 BAAI. All rights reserved.
 """Singleton platform manager with auto-detection and environment override.
 
 The platform is resolved **once** on first call to :func:`get_platform` and

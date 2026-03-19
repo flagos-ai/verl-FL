@@ -1,1 +1,1 @@
-# Copyright (c) BAAI. All rights reserved.
+# Copyright (c) 2026 BAAI. All rights reserved.

@@ -26,7 +26,7 @@ license_head_amazon = "Copyright 2025 Amazon.com Inc and/or its affiliates"
 license_head_facebook = "Copyright (c) 2016-     Facebook, Inc"
 license_head_meituan = "Copyright 2025 Meituan Ltd. and/or its affiliates"
 license_head_huawei = "Copyright (c) 2025 Huawei Technologies Co., Ltd. All Rights Reserved."
-license_head_baai = "Copyright (c) BAAI. All rights reserved."
+license_head_baai = "Copyright (c) 2026 BAAI. All rights reserved."
 license_headers = [
     license_head_bytedance,
     license_head_bytedance_25,

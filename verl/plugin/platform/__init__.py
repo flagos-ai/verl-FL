@@ -1,4 +1,4 @@
-# Copyright (c) BAAI. All rights reserved.
+# Copyright (c) 2026 BAAI. All rights reserved.
 """Unified platform abstraction for multi-chip support.
 
 Usage::

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 BAAI. All rights reserved.
 """Unit tests for the platform abstraction layer.
 
 We pre-populate ``sys.modules`` with lightweight stubs for the top-level
@@ -24,12 +25,12 @@ for _pkg, _rel in [("verl", "verl"), ("verl.plugin", os.path.join("verl", "plugi
 
 # ---------------------------------------------------------------------------
 
-from unittest import mock
+from unittest import mock  # noqa: E402
 
-import pytest
+import pytest  # noqa: E402
 
-from verl.plugin.platform import get_platform, set_platform
-from verl.plugin.platform.platform_manager import (
+from verl.plugin.platform import get_platform, set_platform  # noqa: E402
+from verl.plugin.platform.platform_manager import (  # noqa: E402
     _create_platform,
     _detect_platform_name,
 )

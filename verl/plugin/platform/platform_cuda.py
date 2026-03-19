@@ -1,4 +1,4 @@
-# Copyright (c) BAAI. All rights reserved.
+# Copyright (c) 2026 BAAI. All rights reserved.
 # Adopted from https://github.com/microsoft/DeepSpeed/blob/master/accelerator/cuda_accelerator.py
 """NVIDIA CUDA platform implementation."""
 

@@ -1,4 +1,4 @@
-# Copyright (c) BAAI. All rights reserved.
+# Copyright (c) 2026 BAAI. All rights reserved.
 """Huawei Ascend NPU platform implementation."""
 
 import logging
