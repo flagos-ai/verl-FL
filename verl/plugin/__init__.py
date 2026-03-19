@@ -1,1 +1,1 @@
-# Copyright (c) BAAI Corporation.
+# Copyright (c) BAAI. All rights reserved.

@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # Module-level availability flags (kept for backward compatibility)
 # ---------------------------------------------------------------------------
 
+
 def is_torch_npu_available() -> bool:
     """Check if Ascend NPU is available for PyTorch operations."""
     try:
@@ -45,6 +46,7 @@ is_npu_available = is_torch_npu_available()
 # ---------------------------------------------------------------------------
 # Device info helpers
 # ---------------------------------------------------------------------------
+
 
 def get_visible_devices_keyword() -> str:
     """Get the environment variable name for visible device selection.
@@ -95,6 +97,7 @@ def get_nccl_backend() -> str:
 # Memory / allocator
 # ---------------------------------------------------------------------------
 
+
 def set_expandable_segments(enable: bool) -> None:
     """Configure memory allocator expandable segments setting.
 
@@ -107,6 +110,7 @@ def set_expandable_segments(enable: bool) -> None:
 # ---------------------------------------------------------------------------
 # Device auto-configuration
 # ---------------------------------------------------------------------------
+
 
 def auto_set_device(config) -> None:
     """Automatically configure device name for different accelerators.
@@ -129,6 +133,7 @@ def auto_set_device(config) -> None:
 # ---------------------------------------------------------------------------
 # Device properties
 # ---------------------------------------------------------------------------
+
 
 def get_device_capability(device_id: int = 0) -> tuple[int | None, int | None]:
     """Get the compute capability of the current accelerator device.
@@ -154,6 +159,7 @@ def is_device_available() -> bool:
 # ---------------------------------------------------------------------------
 # RNG helpers
 # ---------------------------------------------------------------------------
+
 
 def manual_seed(seed: int) -> None:
     """Set the seed for the current accelerator device.

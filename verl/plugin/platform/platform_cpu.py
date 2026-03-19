@@ -1,4 +1,4 @@
-# Copyright (c) BAAI Corporation.
+# Copyright (c) BAAI. All rights reserved.
 """CPU-only fallback platform implementation."""
 
 import os

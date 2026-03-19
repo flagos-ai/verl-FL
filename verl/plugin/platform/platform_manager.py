@@ -1,4 +1,4 @@
-# Copyright (c) BAAI Corporation.
+# Copyright (c) BAAI. All rights reserved.
 """Singleton platform manager with auto-detection and environment override.
 
 The platform is resolved **once** on first call to :func:`get_platform` and
@@ -31,8 +31,7 @@ def _detect_platform_name() -> str:
     if env_name:
         if env_name not in _BUILTIN_PLATFORMS:
             logger.warning(
-                "Invalid VERL_PLATFORM='%s', must be one of %s. "
-                "Falling back to auto-detection.",
+                "Invalid VERL_PLATFORM='%s', must be one of %s. Falling back to auto-detection.",
                 env_name,
                 _BUILTIN_PLATFORMS,
             )
@@ -70,9 +69,7 @@ def _create_platform(name: str) -> PlatformBase:
 
         platform = PlatformCUDA()
         if not platform.is_available():
-            logger.warning(
-                "CUDA platform specified but not available. Falling back to CPU."
-            )
+            logger.warning("CUDA platform specified but not available. Falling back to CPU.")
             from .platform_cpu import PlatformCPU
 
             return PlatformCPU()
@@ -83,9 +80,7 @@ def _create_platform(name: str) -> PlatformBase:
 
         platform = PlatformNPU()
         if not platform.is_available():
-            logger.warning(
-                "NPU platform specified but not available. Falling back to CPU."
-            )
+            logger.warning("NPU platform specified but not available. Falling back to CPU.")
             from .platform_cpu import PlatformCPU
 
             return PlatformCPU()

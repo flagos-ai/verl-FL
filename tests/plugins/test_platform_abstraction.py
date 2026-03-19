@@ -24,13 +24,14 @@ for _pkg, _rel in [("verl", "verl"), ("verl.plugin", os.path.join("verl", "plugi
 
 # ---------------------------------------------------------------------------
 
-import pytest
 from unittest import mock
 
-from verl.plugin.platform import get_platform, set_platform, PlatformBase
+import pytest
+
+from verl.plugin.platform import get_platform, set_platform
 from verl.plugin.platform.platform_manager import (
-    _detect_platform_name,
     _create_platform,
+    _detect_platform_name,
 )
 
 
@@ -40,6 +41,7 @@ class TestPlatformDetection:
     def setup_method(self):
         """Reset platform singleton before each test."""
         import verl.plugin.platform.platform_manager as pm
+
         pm._current_platform = None
 
     def test_verl_platform_env_override_cuda(self):
@@ -79,6 +81,7 @@ class TestPlatformCreation:
     def setup_method(self):
         """Reset platform singleton before each test."""
         import verl.plugin.platform.platform_manager as pm
+
         pm._current_platform = None
 
     def test_create_cpu_platform(self):
@@ -105,6 +108,7 @@ class TestPlatformInterface:
     def setup_method(self):
         """Reset platform singleton before each test."""
         import verl.plugin.platform.platform_manager as pm
+
         pm._current_platform = None
 
     def test_get_platform_returns_singleton(self):
@@ -116,6 +120,7 @@ class TestPlatformInterface:
     def test_set_platform_overrides(self):
         """Test that set_platform() overrides the singleton."""
         from verl.plugin.platform.platform_cpu import PlatformCPU
+
         custom_platform = PlatformCPU()
         set_platform(custom_platform)
 
@@ -125,6 +130,7 @@ class TestPlatformInterface:
     def test_manual_seed_cpu(self):
         """Test manual_seed on CPU platform."""
         from verl.plugin.platform.platform_cpu import PlatformCPU
+
         platform = PlatformCPU()
 
         platform.manual_seed(42)
@@ -133,6 +139,7 @@ class TestPlatformInterface:
     def test_device_capability_cpu(self):
         """Test get_device_capability on CPU platform returns (None, None)."""
         from verl.plugin.platform.platform_cpu import PlatformCPU
+
         platform = PlatformCPU()
 
         major, minor = platform.get_device_capability()
@@ -141,6 +148,7 @@ class TestPlatformInterface:
     def test_communication_backend_cpu(self):
         """Test communication_backend_name on CPU platform returns 'gloo'."""
         from verl.plugin.platform.platform_cpu import PlatformCPU
+
         platform = PlatformCPU()
 
         backend = platform.communication_backend_name()
@@ -149,6 +157,7 @@ class TestPlatformInterface:
     def test_nvtx_range_context_manager(self):
         """Test that nvtx_range works as context manager."""
         from verl.plugin.platform.platform_cpu import PlatformCPU
+
         platform = PlatformCPU()
 
         with platform.nvtx_range("test_range"):
@@ -204,6 +213,7 @@ class TestEnvironmentVariableValidation:
     def setup_method(self):
         """Reset platform singleton before each test."""
         import verl.plugin.platform.platform_manager as pm
+
         pm._current_platform = None
 
     def test_invalid_platform_falls_back(self):

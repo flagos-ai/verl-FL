@@ -18,7 +18,6 @@ from contextlib import contextmanager
 from typing import Callable, Optional
 
 import nvtx
-import torch
 
 from verl.plugin.platform import get_platform
 
