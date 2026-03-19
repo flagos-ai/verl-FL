@@ -18,7 +18,8 @@ from contextlib import contextmanager
 from typing import Callable, Optional
 
 import nvtx
-import torch
+
+from verl.plugin.platform import get_platform
 
 from .config import NsightToolConfig
 from .profile import DistProfiler, ProfilerConfig
@@ -126,15 +127,28 @@ class NsightSystemsProfiler(DistProfiler):
             config = ProfilerConfig(ranks=[])
         if not tool_config:
             assert not config.enable, "tool_config must be provided when profiler is enabled"
+        self.enable = config.enable
+        if not config.enable:
+            return
+        self.this_step: bool = False
         self.discrete: bool = tool_config.discrete
+        self.this_rank: bool = False
+        if config.all_ranks:
+            self.this_rank = True
+        elif config.ranks:
+            self.this_rank = rank in config.ranks
 
     def start(self, **kwargs):
-        if not self.discrete:
-            torch.cuda.profiler.start()
+        if self.enable and self.this_rank:
+            self.this_step = True
+            if not self.discrete:
+                get_platform().profiler_start()
 
     def stop(self):
-        if not self.discrete:
-            torch.cuda.profiler.stop()
+        if self.enable and self.this_rank:
+            self.this_step = False
+            if not self.discrete:
+                get_platform().profiler_stop()
 
     def annotate(
         self,
@@ -163,17 +177,22 @@ class NsightSystemsProfiler(DistProfiler):
         def decorator(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs_inner):
+                if not self.enable:
+                    return func(*args, **kwargs_inner)
+
                 profile_name = message or func.__name__
 
-                if self.discrete:
-                    torch.cuda.profiler.start()
-                mark_range = mark_start_range(message=profile_name, color=color, domain=domain, category=category)
+                if self.this_step:
+                    if self.discrete:
+                        get_platform().profiler_start()
+                    mark_range = mark_start_range(message=profile_name, color=color, domain=domain, category=category)
 
                 result = func(*args, **kwargs_inner)
 
-                mark_end_range(mark_range)
-                if self.discrete:
-                    torch.cuda.profiler.stop()
+                if self.this_step:
+                    mark_end_range(mark_range)
+                    if self.discrete:
+                        get_platform().profiler_stop()
 
                 return result
 
