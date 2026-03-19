@@ -17,7 +17,7 @@ Training Phase (TE-FL / Megatron / FSDP):
     TRAINING_FL_FLAGOS_WHITELIST: FlagGems operator whitelist for training
     TRAINING_FL_FLAGOS_BLACKLIST: FlagGems operator blacklist for training
 
-Rollout Phase (vLLM / SGLang):
+Rollout Phase (vLLM):
     VLLM_FL_PREFER_ENABLED: Enable FL preference (true/false)
     VLLM_FL_PLATFORM: Platform type (cuda/npu)
     VLLM_FL_PREFER: Backend priority (flagos/vendor)
@@ -132,7 +132,13 @@ class FLEnvManager:
         Returns:
             bool: True if FlagCX is enabled.
         """
-        return os.environ.get("FLAGCX_PATH") is not None
+        if os.environ.get("USE_FLAGCX", "").lower() in ("true", "1"):
+            assert os.environ.get("FLAGCX_PATH") is not None, "USE_FLAGCX is set but FLAGCX_PATH is not defined"
+            return True
+        elif os.environ.get("USE_FLAGCX", "0").lower() in ("false", "0"):
+            assert os.environ.get("FLAGCX_PATH") is None, "USE_FLAGCX is not enabled but FLAGCX_PATH is defined"
+            return False
+        return False
 
     @classmethod
     def get_training_env(cls) -> dict[str, str]:

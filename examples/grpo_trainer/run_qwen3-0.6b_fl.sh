@@ -8,7 +8,7 @@
 set -x
 
 # ============ Device Configuration ============
-export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+export CUDA_VISIBLE_DEVICES=4,5,6,7
 export HYDRA_FULL_ERROR=1
 
 # ============ FlagCX Communication Library ============
@@ -21,30 +21,30 @@ export HYDRA_FULL_ERROR=1
 # based on fl_config YAML configuration.
 export RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
 export VERL_ENGINE_DEVICE=flagos
-# Training phase environment variables (set by FLEnvManager.apply_training_env):
+# Training phase environment variables:
 export TE_FL_PREFER=flagos	#flagos / vendor / reference	flagos
 export TE_FL_PREFER_VENDOR=0	# Prefer vendor (legacy)	1 / 0	0
 export TE_FL_STRICT=0	# Strict mode (no fallback)	1 / 0	0
 # TE_FL_ALLOW_VENDORS=nvidia,amd	# Allowed vendors (whitelist)	nvidia,amd
 # TE_FL_DENY_VENDORS=vendor_a	# Denied vendors (blacklist)	vendor_a
 # TE_FL_PER_OP=rmsnorm_fwd=vendor:cuda|default
-export VLLM_FL_FLAGOS_BLACKLIST="where_scalar_other, where_scalar_self, where_self, where_self_out"
+export VLLM_FL_FLAGOS_BLACKLIST="where_scalar_other,where_scalar_self,where_self,where_self_out,pad"
 # Logging
 # Variable	Description	Values	Default
 export TEFL_LOG_LEVEL=DEBUG # / INFO / WARNING / ERROR	INF
 
-# Rollout phase environment variables (set by FLEnvManager.apply_rollout_env):
+# Rollout phase environment variables:
 # export VLLM_PLUGINS=""
 # export VLLM_FL_PREFER_ENABLED=true
 # export VLLM_FL_PLATFORM=cuda # will cause error
 # export VLLM_FL_PREFER=flagos
 export USE_FLAGGEMS=true
 export VLLM_FL_OOT_ENABLED=1
-export USE_FLAGCX=0
-unset FLAGCX_PATH
-# export FLAGCX_PATH=/share/project/lizhiyu/FlagCX
+export USE_FLAGCX=1
+# unset FLAGCX_PATH
+export FLAGCX_PATH=/share/project/lizhiyu/FlagCX
 
-# export FLAGCX_LOG_LEVEL=DEBUG
+export FLAGCX_LOG_LEVEL=DEBUG
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -79,7 +79,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.logger='["console"]' \
     trainer.project_name='verl_grpo_example_gsm8k_fl' \
     trainer.experiment_name='qwen3_0.6b_fl' \
-    trainer.n_gpus_per_node=8 \
+    trainer.n_gpus_per_node=4 \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
     trainer.test_freq=5 \
