@@ -28,7 +28,7 @@ export TE_FL_STRICT=0	# Strict mode (no fallback)	1 / 0	0
 # TE_FL_ALLOW_VENDORS=nvidia,amd	# Allowed vendors (whitelist)	nvidia,amd
 # TE_FL_DENY_VENDORS=vendor_a	# Denied vendors (blacklist)	vendor_a
 # TE_FL_PER_OP=rmsnorm_fwd=vendor:cuda|default
-export VLLM_FL_FLAGOS_BLACKLIST="where_scalar_other, where_scalar_self, where_self, where_self_out, pad"
+export VLLM_FL_FLAGOS_BLACKLIST="where_scalar_other, where_scalar_self, where_self, where_self_out"
 # Logging
 # Variable	Description	Values	Default
 export TEFL_LOG_LEVEL=DEBUG # / INFO / WARNING / ERROR	INF

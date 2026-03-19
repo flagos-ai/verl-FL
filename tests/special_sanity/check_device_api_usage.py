@@ -25,6 +25,9 @@ from pathlib import Path
 # directory or file path must contain keyword ".cuda" or "cuda"
 CUDA_KEYWORD_CHECK_WHITELIST = [
     "verl/utils/device.py",
+    "verl/plugin/platform/platform_base.py",  # docstring mentions torch.cuda
+    "verl/plugin/platform/platform_cuda.py",  # CUDA platform implementation
+    "verl/plugin/platform/platform_manager.py",  # platform auto-detection probes torch.cuda
     "recipe/prime/prime_ray_trainer.py",  # appear in default device_name
     "recipe/spin/spin_trainer.py",  # appear in default device_name
     "recipe/sppo/sppo_ray_trainer.py",  # appear in default device_name
@@ -52,6 +55,7 @@ CUDA_KEYWORD_CHECK_WHITELIST = [
 # directory or file path must contain keyword "nccl"
 NCCL_KEYWORD_CHECK_WHITELIST = [
     "verl/utils/device.py",
+    "verl/plugin/platform/platform_cuda.py",  # CUDA platform returns "nccl" backend
     "verl/third_party/sglang/parallel_state.py",  # appear in default backend
     "verl/recipe/fully_async_policy/param_sync.py",  # fully_async_policy in default backend
 ]

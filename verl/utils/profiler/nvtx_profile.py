@@ -18,7 +18,8 @@ from contextlib import contextmanager
 from typing import Callable, Optional
 
 import nvtx
-import torch
+
+from verl.plugin.platform import get_platform
 
 from .config import NsightToolConfig
 from .profile import DistProfiler, ProfilerConfig
@@ -141,13 +142,13 @@ class NsightSystemsProfiler(DistProfiler):
         if self.enable and self.this_rank:
             self.this_step = True
             if not self.discrete:
-                torch.cuda.profiler.start()
+                get_platform().profiler_start()
 
     def stop(self):
         if self.enable and self.this_rank:
             self.this_step = False
             if not self.discrete:
-                torch.cuda.profiler.stop()
+                get_platform().profiler_stop()
 
     def annotate(
         self,
@@ -183,7 +184,7 @@ class NsightSystemsProfiler(DistProfiler):
 
                 if self.this_step:
                     if self.discrete:
-                        torch.cuda.profiler.start()
+                        get_platform().profiler_start()
                     mark_range = mark_start_range(message=profile_name, color=color, domain=domain, category=category)
 
                 result = func(*args, **kwargs_inner)
@@ -191,7 +192,7 @@ class NsightSystemsProfiler(DistProfiler):
                 if self.this_step:
                     mark_end_range(mark_range)
                     if self.discrete:
-                        torch.cuda.profiler.stop()
+                        get_platform().profiler_stop()
 
                 return result
 
