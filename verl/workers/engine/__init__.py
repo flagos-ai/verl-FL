@@ -61,12 +61,3 @@ try:
     __all__ += ["MegatronFLEngineWithLMHead"]
 except ImportError:
     MegatronFLEngineWithLMHead = None
-
-# Ascend NPU FSDP support
-try:
-    from verl.plugin.engine.fsdp_npu.transformer_impl import FSDPNPUEngineWithLMHead, FSDPNPUEngineWithValueHead
-
-    __all__ += ["FSDPNPUEngineWithLMHead", "FSDPNPUEngineWithValueHead"]
-except ImportError:
-    FSDPNPUEngineWithLMHead = None
-    FSDPNPUEngineWithValueHead = None
