@@ -40,8 +40,11 @@ export TEFL_LOG_LEVEL=DEBUG # / INFO / WARNING / ERROR	INF
 # export VLLM_FL_PREFER=flagos
 export USE_FLAGGEMS=true
 export VLLM_FL_OOT_ENABLED=1
-export USE_FLAGCX=1
-export FLAGCX_PATH=/share/project/lizhiyu/FlagCX
+export USE_FLAGCX=0
+unset FLAGCX_PATH
+# export FLAGCX_PATH=/share/project/lizhiyu/FlagCX
+
+# export FLAGCX_LOG_LEVEL=DEBUG
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \

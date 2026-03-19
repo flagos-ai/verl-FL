@@ -36,7 +36,7 @@ Environment variables (managed by FLEnvManager):
 import logging
 import os
 
-from verl.plugins.utils import FLEnvManager, may_enable_flag_gems
+from verl.plugin.utils import FLEnvManager, may_enable_flag_gems
 from verl.trainer.config import CheckpointConfig
 from verl.workers.config import HFModelConfig, McoreEngineConfig, McoreOptimizerConfig
 from verl.workers.engine.base import EngineRegistry

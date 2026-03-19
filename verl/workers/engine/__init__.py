@@ -45,18 +45,18 @@ except ImportError:
     MegatronEngine = None
     MegatronEngineWithLMHead = None
 
-## Plugin engines are imported from verl.plugins.engine
+## Plugin engines are imported from verl.plugin.engine
 
 # FL (FlagOS) multi-chip support
 try:
-    from verl.plugins.engine.fsdp_fl.transformer_impl import FSDPFLEngineWithLMHead, FSDPFLEngineWithValueHead
+    from verl.plugin.engine.fsdp_fl.transformer_impl import FSDPFLEngineWithLMHead, FSDPFLEngineWithValueHead
 
     __all__ += ["FSDPFLEngineWithLMHead", "FSDPFLEngineWithValueHead"]
 except ImportError:
     FSDPFLEngineWithLMHead = None
     FSDPFLEngineWithValueHead = None
 try:
-    from verl.plugins.engine.megatron_fl.transformer_impl import MegatronFLEngineWithLMHead
+    from verl.plugin.engine.megatron_fl.transformer_impl import MegatronFLEngineWithLMHead
 
     __all__ += ["MegatronFLEngineWithLMHead"]
 except ImportError:
@@ -64,7 +64,7 @@ except ImportError:
 
 # Ascend NPU FSDP support
 try:
-    from verl.plugins.engine.fsdp_npu.transformer_impl import FSDPNPUEngineWithLMHead, FSDPNPUEngineWithValueHead
+    from verl.plugin.engine.fsdp_npu.transformer_impl import FSDPNPUEngineWithLMHead, FSDPNPUEngineWithValueHead
 
     __all__ += ["FSDPNPUEngineWithLMHead", "FSDPNPUEngineWithValueHead"]
 except ImportError:

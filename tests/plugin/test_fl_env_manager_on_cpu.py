@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from verl.plugins.utils.config_manager import FLEnvManager, may_enable_flag_gems
+from verl.plugin.utils.config_manager import FLEnvManager, may_enable_flag_gems
 
 
 class TestFLEnvManagerIsEnabled:
