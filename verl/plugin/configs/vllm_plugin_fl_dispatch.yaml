@@ -1,0 +1,42 @@
+# vllm_fl_dispatch.yaml
+
+# Preferred backend type: flagos, vendor, or reference
+prefer: vendor
+
+# Strict mode:
+#   true  = fail immediately on error, no fallback
+#   false = try next backend on failure (default)
+strict: false
+
+# Vendor whitelist (optional)
+allow_vendors:
+  - cuda
+
+# Vendor blacklist (optional)
+deny_vendors:
+  - ascend
+
+# Per-operator backend selection order (optional)
+# Only the backends listed will be tried, in the specified order.
+op_backends:
+  rms_norm:
+    - vendor        # Try any available vendor first
+    - flagos        # Then try flagos
+    # reference not listed, so it won't be used for rms_norm
+
+  silu_and_mul:
+    - vendor:cuda   # Only try CUDA, not other vendors
+    - flagos
+    - reference
+
+# FlagGems operator blacklist (optional)
+# These operators will NOT use FlagGems implementation
+flagos_blacklist:
+  - to_copy
+  - zeros
+  - mm
+
+# OOT operator blacklist (optional)
+# These operators will NOT be registered as OOT replacements
+oot_blacklist:
+  - fused_moe
