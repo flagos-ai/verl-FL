@@ -2,6 +2,7 @@
 # Adopted from https://github.com/microsoft/DeepSpeed/blob/master/accelerator/cuda_accelerator.py
 """NVIDIA CUDA platform implementation."""
 
+import os
 from contextlib import contextmanager
 from types import ModuleType
 from typing import Any, Optional
@@ -74,7 +75,7 @@ class PlatformCUDA(PlatformBase):
     # ------------------------------------------------------------------
 
     def communication_backend_name(self) -> str:
-        return "nccl"
+        return "flagcx" if os.getenv("USE_FLAGCX", "0").lower() in ["1", "true"] else "nccl"
 
     def visible_devices_envvar(self) -> str:
         return "CUDA_VISIBLE_DEVICES"

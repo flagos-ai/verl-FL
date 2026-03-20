@@ -2,6 +2,7 @@
 """Huawei Ascend NPU platform implementation."""
 
 import logging
+import os
 from contextlib import contextmanager
 from types import ModuleType
 from typing import Any, Optional
@@ -78,7 +79,7 @@ class PlatformNPU(PlatformBase):
     # ------------------------------------------------------------------
 
     def communication_backend_name(self) -> str:
-        return "hccl"
+        return "flagcx" if os.getenv("USE_FLAGCX", "0").lower() in ["1", "true"] else "hccl"
 
     def visible_devices_envvar(self) -> str:
         return "ASCEND_RT_VISIBLE_DEVICES"
