@@ -120,6 +120,21 @@ def get_nccl_backend() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Random seed
+# ---------------------------------------------------------------------------
+
+
+def manual_seed(seed: int) -> None:
+    """Set the seed for the current accelerator device."""
+    get_platform().manual_seed(seed)
+
+
+def manual_seed_all(seed: int) -> None:
+    """Set the seed for all accelerator devices."""
+    get_platform().manual_seed_all(seed)
+
+
+# ---------------------------------------------------------------------------
 # Memory / allocator
 # ---------------------------------------------------------------------------
 
@@ -170,6 +185,15 @@ def get_device_capability(device_id: int = 0) -> tuple[int | None, int | None]:
     return get_platform().get_device_capability(device_id)
 
 
+def is_device_available() -> bool:
+    """Check if any accelerator device is available.
+
+    Returns:
+        bool: True if any accelerator is available.
+    """
+    return get_platform().is_available()
+
+
 # ---------------------------------------------------------------------------
 # NPU version / IPC support (from upstream v0.7.1)
 # ---------------------------------------------------------------------------
@@ -204,7 +228,7 @@ def get_npu_versions() -> tuple:
         if not os.path.exists(version_file):
             raise RuntimeError(f"CANN version file not found at {version_file}")
 
-        with open(version_file, "r") as f:
+        with open(version_file) as f:
             for line in f:
                 if "CANN_VERSION" in line:
                     cann_version = line.split("=")[-1].strip()
