@@ -19,6 +19,7 @@ This trainer supports model-agonistic model initialization with huggingface
 """
 
 import json
+import logging
 import os
 import uuid
 from collections import defaultdict
@@ -65,6 +66,8 @@ from verl.utils.tracking import ValidationGenerationsLogger
 from verl.workers.config import FSDPEngineConfig
 from verl.workers.utils.padding import left_right_2_no_padding, no_padding_2_padding
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ResourcePoolManager:
@@ -75,6 +78,28 @@ class ResourcePoolManager:
     resource_pool_spec: dict[str, list[int]]
     mapping: dict[Role, str]
     resource_pool_dict: dict[str, RayResourcePool] = field(default_factory=dict)
+    # Optional: map pool name -> GPU vendor name for heterogeneous GPU scheduling.
+    # e.g. {"global_pool": "nvidia", "rollout_pool": "musa"}
+    # verl will auto-detect GPU vendors across the cluster and pin placement groups
+    # to nodes matching the specified vendor.
+    accelerator_type_spec: dict[str, Optional[str]] = field(default_factory=dict)
+
+    def _resolve_vendor_to_node_ids(self) -> dict[str, list[str]]:
+        """Auto-detect GPU vendors across the cluster and return vendor -> [node_id] mapping.
+
+        Only called when at least one pool has an accelerator_type set.
+        """
+        from verl.utils.cluster_gpu_inspect import group_nodes_by_vendor, inspect_cluster_gpu_types
+
+        node_info = inspect_cluster_gpu_types()
+        vendor_groups = group_nodes_by_vendor(node_info)
+
+        vendor_to_node_ids: dict[str, list[str]] = {}
+        for vendor, nodes in vendor_groups.items():
+            vendor_to_node_ids[vendor] = [n["node_id"] for n in nodes]
+
+        logger.info(f"Cluster GPU vendor detection: { {v: len(ids) for v, ids in vendor_to_node_ids.items()} }")
+        return vendor_to_node_ids
 
     def create_resource_pool(self):
         """Create Ray resource pools for distributed training.
@@ -83,14 +108,42 @@ class ResourcePoolManager:
         with each pool managing GPU resources across multiple nodes.
         For FSDP backend, uses max_colocate_count=1 to merge WorkerGroups.
         For Megatron backend, uses max_colocate_count>1 for different models.
+
+        When accelerator_type_spec is provided, auto-detects GPU vendors across
+        the cluster and pins each pool's placement groups to matching nodes.
         """
+        # Resolve vendor -> node_ids only if any pool needs heterogeneous scheduling.
+        vendor_to_node_ids: dict[str, list[str]] = {}
+        needs_detection = any(v is not None for v in self.accelerator_type_spec.values())
+        if needs_detection:
+            vendor_to_node_ids = self._resolve_vendor_to_node_ids()
+
         for resource_pool_name, process_on_nodes in self.resource_pool_spec.items():
             # max_colocate_count means the number of WorkerGroups (i.e. processes) in each RayResourcePool
             # For FSDP backend, using max_colocate_count=3: actor_critic_ref, rollout, reward model (optional)
             # For Megatron backend, we recommend using max_colocate_count>1
             # that can utilize different WorkerGroup for differnt models
+            accelerator_type = self.accelerator_type_spec.get(resource_pool_name, None)
+
+            target_node_ids = None
+            if accelerator_type is not None:
+                matched_nodes = vendor_to_node_ids.get(accelerator_type, [])
+                required_nnodes = len(process_on_nodes)
+                if len(matched_nodes) < required_nnodes:
+                    raise ValueError(
+                        f"Pool '{resource_pool_name}' requires {required_nnodes} nodes with "
+                        f"vendor '{accelerator_type}', but only {len(matched_nodes)} detected: "
+                        f"{matched_nodes}. Available vendors: {list(vendor_to_node_ids.keys())}"
+                    )
+                target_node_ids = matched_nodes[:required_nnodes]
+                logger.info(f"Pool '{resource_pool_name}' pinned to {accelerator_type} nodes: {target_node_ids}")
+
             resource_pool = RayResourcePool(
-                process_on_nodes=process_on_nodes, use_gpu=True, max_colocate_count=3, name_prefix=resource_pool_name
+                process_on_nodes=process_on_nodes,
+                use_gpu=True,
+                max_colocate_count=3,
+                name_prefix=resource_pool_name,
+                target_node_ids=target_node_ids,
             )
             self.resource_pool_dict[resource_pool_name] = resource_pool
 

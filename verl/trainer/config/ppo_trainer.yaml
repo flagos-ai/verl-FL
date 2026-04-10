@@ -155,6 +155,11 @@ trainer:
   # Number of GPUs per node
   n_gpus_per_node: 8
 
+  # GPU vendor name for heterogeneous GPU scheduling (e.g. "nvidia", "musa", "npu").
+  # verl auto-detects GPU types across the cluster and pins this pool to matching nodes.
+  # Leave null for homogeneous clusters.
+  accelerator_type: null
+
   # Save frequency (by iteration) for model checkpoints
   save_freq: -1
 

@@ -198,6 +198,16 @@ class TaskRunner:
         resource_pool_spec = {
             global_pool_id: [config.trainer.n_gpus_per_node] * config.trainer.nnodes,
         }
+
+        # Build accelerator_type_spec for heterogeneous GPU scheduling.
+        # Users can set trainer.accelerator_type to a GPU vendor name (e.g. "nvidia", "musa")
+        # to pin the global pool to nodes with that GPU type. verl auto-detects GPU vendors
+        # across the cluster at startup — no manual Ray --resources declaration needed.
+        accelerator_type_spec = {}
+        global_accel = config.trainer.get("accelerator_type", None)
+        if global_accel:
+            accelerator_type_spec[global_pool_id] = global_accel
+
         # TODO Here you can use the new registration method to support dynamic registration of roles
         if config.reward_model.enable_resource_pool:
             if config.reward_model.n_gpus_per_node <= 0:
@@ -208,9 +218,17 @@ class TaskRunner:
             reward_pool = [config.reward_model.n_gpus_per_node] * config.reward_model.nnodes
             resource_pool_spec["reward_pool"] = reward_pool
 
+            reward_accel = config.reward_model.get("accelerator_type", None)
+            if reward_accel:
+                accelerator_type_spec["reward_pool"] = reward_accel
+
         from verl.trainer.ppo.ray_trainer import ResourcePoolManager
 
-        resource_pool_manager = ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=self.mapping)
+        resource_pool_manager = ResourcePoolManager(
+            resource_pool_spec=resource_pool_spec,
+            mapping=self.mapping,
+            accelerator_type_spec=accelerator_type_spec,
+        )
         return resource_pool_manager
 
     def add_reward_model_worker(self, config):

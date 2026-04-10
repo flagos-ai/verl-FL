@@ -12,6 +12,10 @@ enable_resource_pool: False
 n_gpus_per_node: 0
 nnodes: 0
 
+# GPU vendor name for heterogeneous GPU scheduling (e.g. "nvidia", "musa", "npu").
+# Only effective when enable_resource_pool is True. See trainer.accelerator_type for details.
+accelerator_type: null
+
 # FSDP strategy: "fsdp" or "fsdp2"
 strategy: ???
 

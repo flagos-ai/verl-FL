@@ -470,6 +470,7 @@ reward_model:
   enable_resource_pool: false
   n_gpus_per_node: 8
   nnodes: 0
+  accelerator_type: null
   strategy: fsdp
   model:
     input_tokenizer: ${actor_rollout_ref.model.path}
@@ -581,6 +582,7 @@ trainer:
   validation_data_dir: null
   nnodes: 1
   n_gpus_per_node: 8
+  accelerator_type: null
   save_freq: -1
   esi_redundant_time: 0
   resume_mode: auto
