@@ -43,6 +43,7 @@ def create_resource_pool_manager(config, roles: list) -> ResourcePoolManager:
     """
     resource_pool_spec = {}
     mapping = {}
+    accelerator_type_spec = {}
 
     # Actor/Critic resource pool
     if any(role in roles for role in [Role.Actor, Role.Critic, Role.RefPolicy, Role.RewardModel]):
@@ -57,6 +58,10 @@ def create_resource_pool_manager(config, roles: list) -> ResourcePoolManager:
             if role in roles:
                 mapping[role] = "trainer_pool"
 
+        trainer_accel = config.trainer.get("accelerator_type", None)
+        if trainer_accel:
+            accelerator_type_spec["trainer_pool"] = trainer_accel
+
     # Rollout resource pool
     if Role.Rollout in roles:
         assert config.rollout.n_gpus_per_node > 0, "config.rollout.n_gpus_per_node must be greater than 0"
@@ -66,7 +71,15 @@ def create_resource_pool_manager(config, roles: list) -> ResourcePoolManager:
         resource_pool_spec["rollout_pool"] = rollout_pool
         mapping[Role.Rollout] = "rollout_pool"
 
-    return ResourcePoolManager(resource_pool_spec=resource_pool_spec, mapping=mapping)
+        rollout_accel = config.rollout.get("accelerator_type", None)
+        if rollout_accel:
+            accelerator_type_spec["rollout_pool"] = rollout_accel
+
+    return ResourcePoolManager(
+        resource_pool_spec=resource_pool_spec,
+        mapping=mapping,
+        accelerator_type_spec=accelerator_type_spec,
+    )
 
 
 def create_role_worker_mapping(config):

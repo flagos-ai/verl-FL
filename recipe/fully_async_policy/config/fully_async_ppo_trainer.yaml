@@ -44,8 +44,13 @@ rollout:
   # Number of nodes used in the rollout
   nnodes: 1
 
-  # Number of GPUs per node                     
+  # Number of GPUs per node
   n_gpus_per_node: 8
+
+  # GPU vendor name for heterogeneous GPU scheduling (e.g. "nvidia", "musa", "npu").
+  # verl auto-detects GPU types across the cluster and pins the rollout pool to matching nodes.
+  # Leave null for homogeneous clusters.
+  accelerator_type: null
 
   # number of responses (i.e. num sample times). > 1 for grpo
   n: 4
