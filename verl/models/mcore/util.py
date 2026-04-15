@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import math
+import re
 
 import torch
 from megatron.core import parallel_state as mpu
 from megatron.core.packed_seq_params import PackedSeqParams
+from packaging import version
 
 from verl.utils.model import CausalLMOutputForPPO
 
@@ -491,3 +493,11 @@ def postprocess_bshd_no_padding(
     output_new_tensor = torch.nested.as_nested_tensor(output_new, layout=torch.jagged)
 
     return output_new_tensor
+
+
+#### Version extraction utility for version check in fused forward patching
+def extract_version(s: str):
+    match = re.search(r"(\d+(?:\.\d+)*(?:\.(?:rc|a|b)\d+)?)$", s)
+    if not match:
+        raise ValueError(f"Invalid version string: {s}")
+    return version.parse(match.group(1))

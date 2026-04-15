@@ -34,7 +34,7 @@ from verl.utils.kernel.linear_cross_entropy import linear_cross_entropy
 from verl.utils.megatron_utils import unwrap_model
 from verl.utils.model import CausalLMOutputForPPO
 
-from .util import postprocess_packed_seqs_for_dict_output
+from .util import extract_version, postprocess_packed_seqs_for_dict_output
 
 
 def _get_patching_model(model: torch.nn.Module):
@@ -50,7 +50,7 @@ def _get_patching_model(model: torch.nn.Module):
 
 
 def patch_fused_forward(model: torch.nn.Module):
-    assert version.parse(mcore.__version__) >= version.parse("0.13.0"), (
+    assert extract_version(mcore.__version__) >= version.parse("0.13.0"), (
         "Fused forward patching requires mecore >= 0.13.0"
     )
     model = _get_patching_model(model)
