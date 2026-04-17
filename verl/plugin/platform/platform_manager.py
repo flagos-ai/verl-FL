@@ -40,13 +40,15 @@ def _detect_platform_name() -> str:
             logger.info("Platform override from VERL_PLATFORM=%s", env_name)
             return env_name
 
-    # 2. Auto-detect CUDA
+    # 2. Auto-detect Moore Threads MUSA  (must come before CUDA because
+    #    torch_musa patches torch.cuda to return True on MUSA devices)
     try:
         import torch
+        import torch_musa  # noqa: F401 – registers torch.musa
 
-        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-            return "cuda"
-    except (ImportError, RuntimeError):
+        if hasattr(torch, "musa") and callable(getattr(torch.musa, "is_available", None)) and torch.musa.is_available():
+            return "musa"
+    except (ImportError, RuntimeError, AttributeError):
         pass
 
     # 3. Auto-detect Ascend NPU
@@ -58,14 +60,13 @@ def _detect_platform_name() -> str:
     except (ImportError, RuntimeError):
         pass
 
-    # 4. Auto-detect Moore Threads MUSA
+    # 4. Auto-detect CUDA
     try:
         import torch
-        import torch_musa  # noqa: F401 – registers torch.musa
 
-        if hasattr(torch, "musa") and callable(getattr(torch.musa, "is_available", None)) and torch.musa.is_available():
-            return "musa"
-    except (ImportError, RuntimeError, AttributeError):
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            return "cuda"
+    except (ImportError, RuntimeError):
         pass
 
     # 5. Fallback – CPU
