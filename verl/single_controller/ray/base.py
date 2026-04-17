@@ -121,7 +121,7 @@ class RayResourcePool(ResourcePool):
         # print(f"pg_name_prefix = {pg_name_prefix}")
         if device_name == "npu":
             device_name = "NPU"
-        elif device_name == "cuda":
+        elif device_name in ("cuda", "musa"):
             device_name = "GPU"
 
         bundle = {"CPU": self.max_colocate_count}
