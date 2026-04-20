@@ -114,6 +114,18 @@ class PlatformBase(abc.ABC):
         """Return the environment-variable name that controls visible devices."""
         ...
 
+    def warmup_collective_backend(self) -> None:
+        """Run a small collective op to fully initialize the communication backend.
+
+        Some backends (e.g. FlagCX) lazily initialize their communicator and
+        require an initial collective operation before they can be used by
+        higher-level APIs such as ``set_model_state_dict``.
+
+        Called by :func:`initialize_global_process_group_ray` right after
+        ``torch.distributed.init_process_group()``.  The default is a no-op.
+        """
+        pass
+
     # ------------------------------------------------------------------
     # Profiling helpers
     # ------------------------------------------------------------------

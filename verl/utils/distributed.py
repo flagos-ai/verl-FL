@@ -94,3 +94,8 @@ def initialize_global_process_group_ray(timeout_second=None):
             timeout=timeout,
             init_method=os.environ.get("DIST_INIT_METHOD", None),
         )
+        # Warm up backends (e.g. FlagCX) that need an initial collective
+        # to fully initialize their communicator.
+        from verl.plugin.platform.platform_manager import get_platform
+
+        get_platform().warmup_collective_backend()
