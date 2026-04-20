@@ -80,18 +80,6 @@ class PlatformCUDA(PlatformBase):
     def visible_devices_envvar(self) -> str:
         return "CUDA_VISIBLE_DEVICES"
 
-    def warmup_collective_backend(self) -> None:
-        """FlagCX requires an initial collective to fully initialize its communicator."""
-        if self.communication_backend_name() != "flagcx":
-            return
-        import torch
-        import torch.distributed as dist
-
-        if dist.is_initialized() and dist.get_world_size() > 1:
-            _warmup = torch.zeros(1, device=self.current_device())
-            dist.broadcast(_warmup, src=0)
-            del _warmup
-
     # ------------------------------------------------------------------
     # Profiling helpers
     # ------------------------------------------------------------------
