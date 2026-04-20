@@ -153,8 +153,14 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
         if not torch.distributed.is_initialized():
             rank = int(os.environ.get("RANK", 0))
             world_size = int(os.environ.get("WORLD_SIZE", 1))
+            device_name = get_device_name()
+            comm_backend = get_nccl_backend()
+            if device_name == "cpu":
+                backend = "gloo"
+            else:
+                backend = f"cpu:gloo,{device_name}:{comm_backend}"
             torch.distributed.init_process_group(
-                backend=f"cpu:gloo,{get_device_name()}:{get_nccl_backend()}",
+                backend=backend,
                 rank=rank,
                 world_size=world_size,
                 timeout=datetime.timedelta(seconds=self.config.get("nccl_timeout", 600)),
