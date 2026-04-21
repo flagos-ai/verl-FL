@@ -133,11 +133,9 @@ class FLEnvManager:
             bool: True if FlagCX is enabled.
         """
         if os.environ.get("USE_FLAGCX", "").lower() in ("true", "1"):
-            assert os.environ.get("FLAGCX_PATH") is not None, "USE_FLAGCX is set but FLAGCX_PATH is not defined"
+            if os.environ.get("FLAGCX_PATH") is None:
+                raise RuntimeError("USE_FLAGCX is set but FLAGCX_PATH is not defined")
             return True
-        elif os.environ.get("USE_FLAGCX", "0").lower() in ("false", "0"):
-            assert os.environ.get("FLAGCX_PATH") is None, "USE_FLAGCX is not enabled but FLAGCX_PATH is defined"
-            return False
         return False
 
     @classmethod
@@ -280,8 +278,10 @@ def may_enable_flag_gems(phase: str = "training"):
     """
     import sys
 
-    # TODO: We must ensure FlagGems is only enabled once per process. This is before vllm-plugin-FL,
-    # so we can't enable flag_gems here.
+    # FlagGems initialization is handled by vllm-plugin-FL during rollout setup.
+    # Since verl uses colocated processes for training and rollout, enabling FlagGems
+    # here would cause duplicate initialization. This will be revisited when verl
+    # supports separate processes for training and rollout phases.
     return
 
     # Check if FlagGems is already imported
