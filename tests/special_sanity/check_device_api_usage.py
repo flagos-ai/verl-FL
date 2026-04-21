@@ -26,6 +26,16 @@ from pathlib import Path
 CUDA_KEYWORD_CHECK_WHITELIST = [
     "verl/utils/device.py",
     "verl/utils/torch_functional.py",  # import flash_attn only on cuda
+    "verl/plugin/platform/platform_base.py",  # docstring mentions torch.cuda
+    "verl/plugin/platform/platform_cuda.py",  # CUDA platform implementation
+    "verl/plugin/platform/platform_manager.py",  # platform auto-detection probes torch.cuda
+    "recipe/prime/prime_ray_trainer.py",  # appear in default device_name
+    "recipe/spin/spin_trainer.py",  # appear in default device_name
+    "recipe/sppo/sppo_ray_trainer.py",  # appear in default device_name
+    "recipe/one_step_off_policy/ray_trainer.py",  # appear in default device_name
+    "recipe/transfer_queue/ray_trainer.py",  # appear in default device_name
+    "recipe/gkd/ray_trainer.py",  # appear in default device_name
+    "recipe/specRL/vllm_plugin/v0_10_0/patch.py",  # appear in self.cudagraph_batch_sizes
     "verl/utils/profiler/nvtx_profile.py",  # appear in NsightSystemsProfiler
     "verl/utils/profiler/torch_profile.py",  # appear in TorchProfiler
     "verl/utils/profiler/config.py",  # appear in TorchProfilerToolConfig
@@ -58,6 +68,7 @@ CUDA_KEYWORD_CHECK_WHITELIST = [
 # directory or file path must contain keyword "nccl"
 NCCL_KEYWORD_CHECK_WHITELIST = [
     "verl/utils/device.py",
+    "verl/plugin/platform/platform_cuda.py",  # CUDA platform returns "nccl" backend
     "verl/third_party/sglang/parallel_state.py",  # appear in default backend
 ]
 
