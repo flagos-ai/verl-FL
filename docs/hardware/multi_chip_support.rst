@@ -50,73 +50,74 @@ Architecture Overview
 
 ::
 
-    ┌──────────────────────────────────────────────────────────────────────────┐
-    │                   verl FL Multi-Chip Architecture                       │
-    ├──────────────────────────────────────────────────────────────────────────┤
-    │                                                                          │
-    │  ┌──────────────────────────────────────────────────────────────────┐    │
-    │  │                   Platform Plugin System                         │    │
-    │  │                 (verl.plugin.platform)                           │    │
-    │  │                                                                  │    │
-    │  │  PlatformRegistry ──auto-detect──▶ BasePlatform (active singleton)   │
-    │  │       │                                    │                     │    │
-    │  │       ├── CUDAPlatform   (nvidia / cuda)   ├── is_available()   │    │
-    │  │       ├── NPUPlatform    (ascend / npu)    ├── current_device() │    │
-    │  │       ├── MLUPlatform    (cambricon / mlu)  ├── device_count()  │    │
-    │  │       ├── MUSAPlatform   (mthreads / musa)  ├── empty_cache()  │    │
-    │  │       └── _CPUPlatform   (fallback)         └── ...             │    │
-    │  │                                                                  │    │
-    │  └──────────────────────────────────────────────────────────────────┘    │
-    │                         │                                                │
-    │                         ▼                                                │
-    │  ┌──────────────────────────────────────────────────────────────────┐    │
-    │  │                   Engine Plugin System                           │    │
-    │  │                 (verl.plugin.engine)                             │    │
-    │  │                                                                  │    │
-    │  │  EngineRegistry.get_engine_cls(model_type, backend)             │    │
-    │  │       │                                                          │    │
-    │  │       │  Resolution: VERL_ENGINE_DEVICE ▶ auto-detect ▶ "cuda"  │    │
-    │  │       │                                                          │    │
-    │  │       ├── device="cuda"   → FSDPEngine / MegatronEngine         │    │
-    │  │       ├── device="flagos" → FSDPFLEngine / MegatronFLEngine     │    │
-    │  │       └── device="npu"    → FSDPNPUEngine                       │    │
-    │  │                                                                  │    │
-    │  └──────────────────────────────────────────────────────────────────┘    │
-    │                         │                        │                       │
-    │           ┌─────────────▼──────────┐  ┌──────────▼──────────┐           │
-    │           │     Training Phase     │  │    Rollout Phase    │           │
-    │           │                        │  │                     │           │
-    │           │  ┌──────────────────┐  │  │  ┌───────────────┐  │           │
-    │           │  │ MegatronFLEngine │  │  │  │ vLLM          │  │           │
-    │           │  │ ├─ TE-FL         │  │  │  │ + plugin-FL   │  │           │
-    │           │  │ ├─ FlagGems      │  │  │  │ ├─ FlagGems   │  │           │
-    │           │  │ └─ FlagCX        │  │  │  │ └─ FlagCX     │  │           │
-    │           │  └──────────────────┘  │  │  └───────────────┘  │           │
-    │           │                        │  │                     │           │
-    │           │  ┌──────────────────┐  │  │  ┌───────────────┐  │           │
-    │           │  │ FSDPFLEngine     │  │  │  │ SGLang        │  │           │
-    │           │  │ ├─ FlagGems      │  │  │  │ (future)      │  │           │
-    │           │  │ └─ FlagCX        │  │  │  └───────────────┘  │           │
-    │           │  └──────────────────┘  │  │                     │           │
-    │           └────────────────────────┘  └─────────────────────┘           │
-    │                                                                          │
-    │  ┌──────────────────────────────────────────────────────────────────┐    │
-    │  │                       FLEnvManager                               │    │
-    │  │  Unified environment variable management for training & rollout  │    │
-    │  │  Location: verl/plugin/utils/config_manager.py                  │    │
-    │  └──────────────────────────────────────────────────────────────────┘    │
-    │                                                                          │
-    │  ┌──────────────────────────────────────────────────────────────────┐    │
-    │  │                    External Dependencies                         │    │
-    │  │                                                                  │    │
-    │  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌──────────────┐    │    │
-    │  │  │ FlagGems  │ │  FlagCX   │ │   TE-FL   │ │ vllm-plugin  │    │    │
-    │  │  │ (Triton   │ │ (Comm     │ │ (MCore    │ │    -FL       │    │    │
-    │  │  │  ops)     │ │  library) │ │  training)│ │ (inference)  │    │    │
-    │  │  └───────────┘ └───────────┘ └───────────┘ └──────────────┘    │    │
-    │  └──────────────────────────────────────────────────────────────────┘    │
-    │                                                                          │
-    └──────────────────────────────────────────────────────────────────────────┘
+    +-------------------------------------------------------------------+
+    |                 verl FL Multi-Chip Architecture                   |
+    +-------------------------------------------------------------------+
+    |                                                                   |
+    |  +---------------------------------------------------------+      |
+    |  |              Platform Plugin System                     |      |
+    |  |            (verl.plugin.platform)                       |      |
+    |  |                                                         |      |
+    |  |  PlatformRegistry --auto-detect--> BasePlatform         |      |
+    |  |       |                                 |               |      |
+    |  |       +-- CUDAPlatform  (nvidia/cuda)   +- is_available|      |
+    |  |       +-- NPUPlatform   (ascend/npu)    +- current_dev |      |
+    |  |       +-- MLUPlatform   (cambricon/mlu) +- device_count|      |
+    |  |       +-- MUSAPlatform  (mthreads/musa) +- empty_cache |      |
+    |  |       +-- _CPUPlatform  (fallback)      +- ...         |      |
+    |  |                                                         |      |
+    |  +---------------------------------------------------------+      |
+    |                        |                                          |
+    |                        v                                          |
+    |  +---------------------------------------------------------+      |
+    |  |              Engine Plugin System                       |      |
+    |  |            (verl.plugin.engine)                         |      |
+    |  |                                                         |      |
+    |  |  EngineRegistry.get_engine_cls(model_type, backend)    |      |
+    |  |       |                                                 |      |
+    |  |       | Resolution: VERL_ENGINE_DEVICE > auto > cuda    |      |
+    |  |       |                                                 |      |
+    |  |       +-- "cuda"   -> FSDPEngine / MegatronEngine       |      |
+    |  |       +-- "flagos" -> FSDPFLEngine / MegatronFLEngine   |      |
+    |  |       +-- "npu"    -> FSDPNPUEngine                     |      |
+    |  |                                                         |      |
+    |  +---------------------------------------------------------+      |
+    |                  |                       |                        |
+    |    +-------------v----------+  +---------v--------+               |
+    |    |    Training Phase      |  |  Rollout Phase   |               |
+    |    |                        |  |                  |               |
+    |    | +------------------+   |  | +--------------+ |               |
+    |    | | MegatronFLEngine |   |  | | vLLM         | |               |
+    |    | | +- TE-FL         |   |  | | + plugin-FL  | |               |
+    |    | | +- FlagGems      |   |  | | +- FlagGems  | |               |
+    |    | | +- FlagCX        |   |  | | +- FlagCX    | |               |
+    |    | +------------------+   |  | +--------------+ |               |
+    |    |                        |  |                  |               |
+    |    | +------------------+   |  | +--------------+ |               |
+    |    | | FSDPFLEngine     |   |  | | SGLang       | |               |
+    |    | | +- FlagGems      |   |  | | (future)     | |               |
+    |    | | +- FlagCX        |   |  | +--------------+ |               |
+    |    | +------------------+   |  |                  |               |
+    |    +------------------------+  +------------------+               |
+    |                                                                   |
+    |  +---------------------------------------------------------+      |
+    |  |                    FLEnvManager                         |      |
+    |  |  Unified env var management for training and rollout   |      |
+    |  |  Location: verl/plugin/utils/config_manager.py         |      |
+    |  +---------------------------------------------------------+      |
+    |                                                                   |
+    |  +---------------------------------------------------------+      |
+    |  |                 External Dependencies                   |      |
+    |  |                                                         |      |
+    |  |  +-----------+ +----------+ +--------+ +-------------+  |      |
+    |  |  | FlagGems  | | FlagCX   | | TE-FL  | | vllm-plugin |  |      |
+    |  |  | (Triton   | | (Comm    | | (MCore | |    -FL      |  |      |
+    |  |  |  ops)     | |  library)| | train) | | (inference) |  |      |
+    |  |  +-----------+ +----------+ +--------+ +-------------+  |      |
+    |  |                                                         |      |
+    |  +---------------------------------------------------------+      |
+    |                                                                   |
+    +-------------------------------------------------------------------+
 
 Platform Plugin System
 ----------------------
