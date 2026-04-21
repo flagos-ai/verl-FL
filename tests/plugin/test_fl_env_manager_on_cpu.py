@@ -92,7 +92,7 @@ class TestFLEnvManagerFlagCX:
     """Tests for FlagCX enabled check."""
 
     def test_flagcx_enabled_when_path_set(self):
-        with patch.dict(os.environ, {"FLAGCX_PATH": "/opt/flagcx"}, clear=False):
+        with patch.dict(os.environ, {"FLAGCX_PATH": "/opt/flagcx", "USE_FLAGCX": "1"}, clear=False):
             assert FLEnvManager.is_flagcx_enabled() is True
 
     def test_flagcx_disabled_when_path_unset(self):
@@ -220,6 +220,7 @@ class TestFLEnvManagerSummary:
         env_keys = FLEnvManager.TRAINING_ENV_KEYS + FLEnvManager.ROLLOUT_ENV_KEYS + FLEnvManager.COMMON_ENV_KEYS
         env = {k: v for k, v in os.environ.items() if k not in env_keys}
         env["FLAGCX_PATH"] = "/opt/flagcx"
+        env["USE_FLAGCX"] = "1"
         with patch.dict(os.environ, env, clear=True):
             summary = FLEnvManager.get_summary()
             assert "FlagCX" in summary
@@ -233,6 +234,7 @@ class TestFLEnvManagerSummary:
                 "VLLM_FL_PREFER": "flagos",
                 "USE_FLAGGEMS": "true",
                 "FLAGCX_PATH": "/opt/flagcx",
+                "USE_FLAGCX": "1",
             }
         )
         with patch.dict(os.environ, env, clear=True):
