@@ -155,10 +155,29 @@ both training and rollout phases. It supports:
 
 - **Training phase variables**: TE-FL backend priority, strict mode, vendor
   allow/deny lists, per-op configuration, FlagGems operator whitelists and
-  blacklists.
+  blacklists. The commonly used configurations are as follows:
+
+  .. code-block:: bash
+
+     export TE_FL_PREFER=flagos    # flagos / vendor / reference
+     export TE_FL_STRICT=0         # Strict mode (no fallback): 1 / 0
+
+  You can refer to `TransformerEngine-FL <https://github.com/flagos-ai/TransformerEngine-FL/pull/4>`_ for a more detailed explanation.
+
 - **Rollout phase variables**: vLLM-FL preference, platform type, backend
   priority, out-of-tree plugin toggle, FlagGems operator whitelists and
-  blacklists.
+  blacklists. The commonly used configurations are as follows:
+
+  .. code-block:: bash
+
+     export VLLM_PLUGINS="fl"
+     export USE_FLAGGEMS=true
+     export VLLM_FL_OOT_ENABLED=1
+     export VLLM_FL_FLAGOS_BLACKLIST="where_scalar_other,where_scalar_self,where_self,where_self_out,pad"
+     export USE_FLAGCX=1
+     export FLAGCX_PATH=/path/FlagCX
+
+  You can refer to `vllm-plugin-FL <https://github.com/flagos-ai/vllm-plugin-FL/blob/main/vllm_fl/dispatch/README.md>`_ for a more detailed explanation.
 - **Common variables**: ``USE_FLAGGEMS`` (global FlagGems toggle),
   ``USE_FLAGCX`` (FlagCX communication toggle), ``FLAGCX_PATH`` (FlagCX
   installation path).
