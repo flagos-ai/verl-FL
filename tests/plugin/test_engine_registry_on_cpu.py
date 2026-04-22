@@ -25,8 +25,8 @@ class DummyEngine(BaseEngine):
         return True
 
 
-class DummyFlagosEngine(BaseEngine):
-    """A minimal flagos engine for testing registration."""
+class DummyCustomEngine(BaseEngine):
+    """A minimal custom device engine for testing registration."""
 
     @property
     def is_param_offload_enabled(self) -> bool:
@@ -67,23 +67,23 @@ class TestEngineRegistryRegister:
         assert EngineRegistry._engines["test_model2"]["megatron"]["cuda"] is TestEngine
 
     def test_register_multiple_devices(self):
-        @EngineRegistry.register(model_type="test_model3", backend="fsdp", device=["cuda", "npu", "flagos"])
+        @EngineRegistry.register(model_type="test_model3", backend="fsdp", device=["cuda", "npu", "custom_device"])
         class TestEngine(DummyEngine):
             pass
 
         assert EngineRegistry._engines["test_model3"]["fsdp"]["cuda"] is TestEngine
         assert EngineRegistry._engines["test_model3"]["fsdp"]["npu"] is TestEngine
-        assert EngineRegistry._engines["test_model3"]["fsdp"]["flagos"] is TestEngine
+        assert EngineRegistry._engines["test_model3"]["fsdp"]["custom_device"] is TestEngine
 
     def test_register_multiple_backends_and_devices(self):
-        @EngineRegistry.register(model_type="test_model4", backend=["fsdp", "megatron"], device=["cuda", "flagos"])
+        @EngineRegistry.register(model_type="test_model4", backend=["fsdp", "megatron"], device=["cuda", "custom_device"])
         class TestEngine(DummyEngine):
             pass
 
         assert EngineRegistry._engines["test_model4"]["fsdp"]["cuda"] is TestEngine
-        assert EngineRegistry._engines["test_model4"]["fsdp"]["flagos"] is TestEngine
+        assert EngineRegistry._engines["test_model4"]["fsdp"]["custom_device"] is TestEngine
         assert EngineRegistry._engines["test_model4"]["megatron"]["cuda"] is TestEngine
-        assert EngineRegistry._engines["test_model4"]["megatron"]["flagos"] is TestEngine
+        assert EngineRegistry._engines["test_model4"]["megatron"]["custom_device"] is TestEngine
 
     def test_register_default_device_is_cuda(self):
         @EngineRegistry.register(model_type="test_model5", backend="fsdp")
@@ -105,14 +105,14 @@ class TestEngineRegistryGetEngineCls:
             cls = EngineRegistry.get_engine_cls("get_test", "fsdp")
             assert cls is TestEngine
 
-    def test_get_engine_cls_flagos(self):
-        @EngineRegistry.register(model_type="get_test_fl", backend="fsdp", device="flagos")
-        class TestFlagosEngine(DummyFlagosEngine):
+    def test_get_engine_cls_custom_device(self):
+        @EngineRegistry.register(model_type="get_test_custom", backend="fsdp", device="custom_device")
+        class TestCustomEngine(DummyCustomEngine):
             pass
 
-        with patch.dict(os.environ, {"VERL_ENGINE_DEVICE": "FLAGOS"}, clear=False):
-            cls = EngineRegistry.get_engine_cls("get_test_fl", "fsdp")
-            assert cls is TestFlagosEngine
+        with patch.dict(os.environ, {"VERL_ENGINE_DEVICE": "custom_device"}, clear=False):
+            cls = EngineRegistry.get_engine_cls("get_test_custom", "fsdp")
+            assert cls is TestCustomEngine
 
     def test_get_engine_cls_unknown_model_type(self):
         with pytest.raises(AssertionError, match="Unknown model_type"):
