@@ -128,6 +128,13 @@ class TrainingWorker(Worker, DistProfilerExtension):
         )
 
         self.model_config.model_type = self.config.model_type
+
+        # Load custom engine module if specified (triggers @EngineRegistry.register decorators)
+        if self.engine_config.custom_engine_module:
+            from verl.utils.import_utils import load_module
+
+            load_module(self.engine_config.custom_engine_module)
+
         self.engine: BaseEngine = EngineRegistry.new(
             model_type=self.config.model_type,
             backend=self.engine_config.strategy,
