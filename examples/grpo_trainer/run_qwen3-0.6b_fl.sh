@@ -85,7 +85,6 @@ python3 -m verl.trainer.main_ppo \
     trainer.nnodes=1 \
     trainer.save_freq=20 \
     trainer.test_freq=5 \
-    +trainer.use_legacy_worker_impl='disable' \
     +actor_rollout_ref.rollout.enable_sleep_mode=False \
     actor_rollout_ref.rollout.free_cache_engine=False \
     trainer.total_epochs=15 \
