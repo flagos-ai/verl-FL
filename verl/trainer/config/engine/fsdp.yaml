@@ -62,6 +62,9 @@ strategy: fsdp
 # Mixed precision training param dtype
 dtype: bfloat16 # ["bfloat16", "float16"]
 
+# Custom engine module to load (e.g., "pkg://verl_plugin_fl.engine" for FL multi-chip support)
+custom_engine_module: null
+
 # QAT (Quantization-Aware Training) configuration
 qat:
 
