@@ -141,11 +141,17 @@ Engine Plugin System
 --------------------
 
 The engine plugin system extends existing FSDP and Megatron engines with
-chip-specific optimizations. Engine resolution follows this order:
+chip-specific optimizations. Engine plugins auto-configure device selection
+on import via ``os.environ.setdefault("VERL_ENGINE_DEVICE", "<device>")``.
 
-1. ``VERL_ENGINE_DEVICE`` environment variable (explicit override)
+Engine resolution follows this order:
+
+1. ``VERL_ENGINE_DEVICE`` environment variable (explicit override or plugin auto-set)
 2. Platform auto-detection
 3. ``"cuda"`` as fallback
+
+**Usage**: Only ``custom_engine_module`` needs to be configured. Device selection
+happens automatically when the plugin is loaded.
 
 FLEnvManager
 ------------
