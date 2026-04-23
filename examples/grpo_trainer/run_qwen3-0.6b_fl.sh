@@ -20,8 +20,8 @@ export HYDRA_FULL_ERROR=1
 # In verl FL architecture, these are set dynamically by FLEnvManager
 # based on fl_config YAML configuration.
 export RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
-# Engine selection: plugin overrides default CUDA engines via "last writer wins" registration.
-# No VERL_ENGINE_DEVICE needed — just configure custom_engine_module in the command below.
+# Load FL engine plugin via VERL_USE_EXTERNAL_MODULES (triggers @EngineRegistry.register)
+export VERL_USE_EXTERNAL_MODULES=verl_plugin_fl.engine
 # Training phase environment variables:
 export TE_FL_PREFER=flagos	#flagos / vendor / reference	flagos
 export TE_FL_PREFER_VENDOR=0	# Prefer vendor (legacy)	1 / 0	0
@@ -68,7 +68,6 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.actor.fsdp_config.param_offload=False \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
-    actor_rollout_ref.actor.fsdp_config.custom_engine_module='pkg://verl_plugin_fl.engine' \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=4 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
@@ -76,7 +75,6 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=5 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=4 \
     actor_rollout_ref.ref.fsdp_config.param_offload=True \
-    actor_rollout_ref.ref.fsdp_config.custom_engine_module='pkg://verl_plugin_fl.engine' \
     algorithm.use_kl_in_reward=False \
     trainer.critic_warmup=0 \
     trainer.logger='["console"]' \

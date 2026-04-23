@@ -116,13 +116,6 @@ class EngineConfig(BaseConfig):
     full_determinism: bool = False
     router_replay: EngineRouterReplayConfig = field(default_factory=EngineRouterReplayConfig)
 
-    # Path to a custom engine module that will be dynamically loaded before
-    # engine instantiation.  The module is expected to register engine classes
-    # via ``@EngineRegistry.register(...)`` decorators.
-    # Supports both ``pkg://`` (installed package) and ``file://`` (local file)
-    # prefixes.  See ``verl.utils.import_utils.load_module`` for details.
-    custom_engine_module: Optional[str] = None
-
     def __post_init__(self):
         pass
         # TODO: turn on this check after we reorg config

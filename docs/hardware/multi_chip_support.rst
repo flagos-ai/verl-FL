@@ -151,8 +151,9 @@ Engine resolution uses the same ``get_device_name()`` to auto-detect the
 hardware type (e.g. ``"cuda"``, ``"npu"``), so the plugin's registration
 automatically matches the lookup key.
 
-**Usage**: Only ``custom_engine_module`` needs to be configured. No environment
-variables are needed for engine selection.
+**Usage**: Set ``VERL_USE_EXTERNAL_MODULES=verl_plugin_fl.engine`` to load the
+plugin. verl will call ``importlib.import_module()`` at startup, triggering
+the engine registration.
 
 FLEnvManager
 ------------
