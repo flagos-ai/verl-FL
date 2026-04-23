@@ -62,4 +62,3 @@ try:
 except ImportError:
     MegatronEngine = None
     MegatronEngineWithLMHead = None
-
