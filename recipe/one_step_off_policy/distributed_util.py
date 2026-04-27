@@ -40,7 +40,7 @@ class _TorchDistBroadcastGroup:
         work.wait()
 
 
-def _create_flagcx_weight_sync_group(master_address, master_port, rank, world_size):
+def _create_flagcx_weight_sync_group(master_address, master_port, rank, world_size, device):
     """Create a weight-sync process group for FlagCX environments.
 
     Uses a standalone ``TCPStore`` for rendezvous and creates a FlagCX
@@ -70,6 +70,7 @@ def _create_flagcx_weight_sync_group(master_address, master_port, rank, world_si
         store=prefix_store,
         group_name=f"weight_sync_{master_port}",
         timeout=timedelta(seconds=1800),
+        device_id=torch.device(device),
     )
     return _TorchDistBroadcastGroup(pg)
 
@@ -87,7 +88,7 @@ def vllm_stateless_init_process_group(master_address, master_port, rank, world_s
     # FlagCX: create a standalone FlagCX process group for device-side
     # broadcast, bypassing vLLM's PyNcclCommunicator which needs native NCCL.
     if comm_backend not in ("nccl", "gloo", "hccl"):
-        return _create_flagcx_weight_sync_group(master_address, master_port, rank, world_size)
+        return _create_flagcx_weight_sync_group(master_address, master_port, rank, world_size, device)
 
     # NOTE: If it is necessary to support weight synchronization with the sglang backend in the future,
     # the following can be used:
