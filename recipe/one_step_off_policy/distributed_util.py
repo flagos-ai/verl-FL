@@ -61,7 +61,8 @@ def _create_flagcx_weight_sync_group(master_address, master_port, rank, world_si
     prefix_store = dist.PrefixStore(f"weight_sync_{master_port}", store)
 
     backend = get_dist_backend()
-    pg = dist.distributed_c10d._new_process_group_helper(
+    # _new_process_group_helper returns (ProcessGroup, PrefixStore) tuple.
+    pg, _ = dist.distributed_c10d._new_process_group_helper(
         group_size=world_size,
         group_rank=rank,
         global_ranks_in_group=list(range(world_size)),
