@@ -27,7 +27,7 @@ def init_device_mesh_hetero(device_type, mesh_shape, mesh_dim_names=None):
     """FlagCX-compatible init_device_mesh that supports heterogeneous device types.
 
     In heterogeneous environments (e.g. MUSA x NVIDIA), different ranks have
-    different device_type ("musa" vs "cuda"). Standard init_device_mesh requires
+    different device_type (musa vs cuda). Standard init_device_mesh requires
     all ranks to pass the same device_type, which fails. This function uses
     dist.new_group + DeviceMesh.from_group to bypass that restriction when
     FlagCX is the communication backend.

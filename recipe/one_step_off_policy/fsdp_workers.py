@@ -95,7 +95,7 @@ class DetachSync(AsyncActorRolloutRefWorker):
                 if torch.distributed.get_rank() == 0:
                     tensor.copy_(origin_data)
 
-            if device_name == "npu":
+            if hasattr(self, "_weight_sync_group"):
                 self._weight_sync_group.broadcast(tensor, src=0, stream=get_torch_device().current_stream())
             else:
                 collective.broadcast(tensor, src_rank=0, group_name="actor_rollout")

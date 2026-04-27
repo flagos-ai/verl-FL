@@ -58,6 +58,7 @@ NCCL_KEYWORD_CHECK_WHITELIST = [
     "verl/plugin/platform/platform_cuda.py",  # CUDA platform returns "nccl" backend
     "verl/third_party/sglang/parallel_state.py",  # appear in default backend
     "verl/recipe/fully_async_policy/param_sync.py",  # fully_async_policy in default backend
+    "recipe/one_step_off_policy/distributed_util.py",  # backend name comparison for FlagCX routing
 ]
 
 SEARCH_WHITELIST = CUDA_KEYWORD_CHECK_WHITELIST + NCCL_KEYWORD_CHECK_WHITELIST
