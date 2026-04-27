@@ -1,5 +1,5 @@
 # Copyright (c) 2026 BAAI. All rights reserved.
-"""Huawei Ascend NPU platform implementation."""
+"""Moore Threads MUSA platform implementation."""
 
 import logging
 import os
@@ -14,8 +14,20 @@ from .platform_base import PlatformBase
 logger = logging.getLogger(__name__)
 
 
-class PlatformNPU(PlatformBase):
-    """Platform backend for Huawei Ascend NPU."""
+def _get_musa_module() -> ModuleType:
+    """Return the ``torch.musa`` module, importing ``torch_musa`` if needed."""
+    if not hasattr(torch, "musa"):
+        try:
+            import torch_musa  # noqa: F401 – registers torch.musa
+        except (ImportError, RuntimeError, AttributeError) as err:
+            raise ImportError(
+                "Moore Threads MUSA platform requires the 'torch_musa' package. Please install it first."
+            ) from err
+    return torch.musa
+
+
+class PlatformMUSA(PlatformBase):
+    """Platform backend for Moore Threads MUSA GPUs."""
 
     # ------------------------------------------------------------------
     # Core device management
@@ -23,55 +35,64 @@ class PlatformNPU(PlatformBase):
 
     @property
     def device_name(self) -> str:
-        return "npu"
+        return "musa"
 
     @property
     def device_module(self) -> ModuleType:
-        return torch.npu
+        return _get_musa_module()
 
     def is_available(self) -> bool:
-        return torch.npu.is_available()
+        try:
+            musa = _get_musa_module()
+            return musa.is_available()
+        except ImportError:
+            return False
 
     def current_device(self) -> int:
-        return torch.npu.current_device()
+        return _get_musa_module().current_device()
 
     def device_count(self) -> int:
-        return torch.npu.device_count()
+        return _get_musa_module().device_count()
 
     def set_device(self, device_index: int) -> None:
-        torch.npu.set_device(device_index)
+        _get_musa_module().set_device(device_index)
 
     def synchronize(self, device_index: Optional[int] = None) -> None:
-        torch.npu.synchronize(device_index)
+        if device_index is not None:
+            _get_musa_module().synchronize(device_index)
+        else:
+            _get_musa_module().synchronize()
 
     # ------------------------------------------------------------------
     # Random number generator
     # ------------------------------------------------------------------
 
     def manual_seed(self, seed: int) -> None:
-        torch.npu.manual_seed(seed)
+        _get_musa_module().manual_seed(seed)
 
     def manual_seed_all(self, seed: int) -> None:
-        torch.npu.manual_seed_all(seed)
+        _get_musa_module().manual_seed_all(seed)
 
     # ------------------------------------------------------------------
     # Memory management
     # ------------------------------------------------------------------
 
     def set_allocator_settings(self, settings: str) -> None:
-        if hasattr(torch.npu, "memory") and hasattr(torch.npu.memory, "_set_allocator_settings"):
-            torch.npu.memory._set_allocator_settings(settings)
+        musa = _get_musa_module()
+        if hasattr(musa, "memory") and hasattr(musa.memory, "_set_allocator_settings"):
+            musa.memory._set_allocator_settings(settings)
 
     def empty_cache(self) -> None:
-        torch.npu.empty_cache()
+        _get_musa_module().empty_cache()
 
     # ------------------------------------------------------------------
     # Device properties
     # ------------------------------------------------------------------
 
     def get_device_capability(self, device_index: int = 0) -> tuple[Optional[int], Optional[int]]:
-        if hasattr(torch.npu, "get_device_capability"):
-            return torch.npu.get_device_capability(device_index)
+        musa = _get_musa_module()
+        if hasattr(musa, "get_device_capability"):
+            return musa.get_device_capability(device_index)
         return (None, None)
 
     # ------------------------------------------------------------------
@@ -79,10 +100,21 @@ class PlatformNPU(PlatformBase):
     # ------------------------------------------------------------------
 
     def communication_backend_name(self) -> str:
-        return "flagcx" if os.getenv("USE_FLAGCX", "0").lower() in ["1", "true"] else "hccl"
+        env = os.getenv("USE_FLAGCX", "").lower()
+        if env in ("1", "true"):
+            return "flagcx"
+        if env in ("0", "false"):
+            return "mccl"
+        # Auto-detect: if flagcx is installed, use it
+        try:
+            import flagcx  # noqa: F401
+
+            return "flagcx"
+        except ImportError:
+            return "mccl"
 
     def visible_devices_envvar(self) -> str:
-        return "ASCEND_RT_VISIBLE_DEVICES"
+        return "MUSA_VISIBLE_DEVICES"
 
     # ------------------------------------------------------------------
     # Profiling helpers
@@ -90,8 +122,7 @@ class PlatformNPU(PlatformBase):
 
     @contextmanager
     def nvtx_range(self, msg: str):
-        # NPU does not have an NVTX equivalent, but we log for debugging
-        logger.debug("NVTX range (no-op on NPU): %s", msg)
+        logger.debug("NVTX range (no-op on MUSA): %s", msg)
         yield
 
     def profiler_start(self) -> None:
@@ -112,12 +143,8 @@ class PlatformNPU(PlatformBase):
     # ------------------------------------------------------------------
 
     def ensure_initialized(self) -> None:
-        """Eagerly load ``torch_npu`` so that downstream libraries
-        (``transformers``, ``accelerate``, …) see a fully initialised
-        NPU runtime when they are imported later."""
-        try:
-            import torch_npu  # noqa: F401
-
-            logger.debug("torch_npu initialised by PlatformNPU.ensure_initialized()")
-        except ImportError:
-            pass
+        """Eagerly load ``torch_musa`` so that downstream libraries
+        (``transformers``, ``accelerate``, ``flash_attn``, …) see a fully
+        initialised MUSA runtime when they are imported later."""
+        _get_musa_module()
+        logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")

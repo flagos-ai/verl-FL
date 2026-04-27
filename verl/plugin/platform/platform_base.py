@@ -142,3 +142,20 @@ class PlatformBase(abc.ABC):
     def cudart(self) -> Any:
         """Return the CUDA runtime API object, or ``None`` if not applicable."""
         ...
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    def ensure_initialized(self) -> None:  # noqa: B027
+        """Ensure the hardware backend library is fully loaded.
+
+        Called once by :func:`get_platform` right after the platform singleton
+        is created.  Subclasses that depend on a third-party extension module
+        (e.g. ``torch_musa``, ``torch_npu``) should override this to import
+        the module eagerly so that downstream libraries like ``transformers``
+        and ``accelerate`` see a consistent runtime environment.
+
+        The default implementation is a no-op.
+        """
+        pass
