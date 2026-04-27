@@ -473,6 +473,7 @@ def fsdp2_load_full_state_dict(model: torch.nn.Module, full_state: dict, device_
 
     cpu_offload = cpu_offload is not None
     options = StateDictOptions(full_state_dict=True, cpu_offload=cpu_offload, broadcast_from_rank0=True)
+
     set_model_state_dict(model, full_state, options=options)
 
     # rotary_emb is not in state_dict, so we need to broadcast it manually

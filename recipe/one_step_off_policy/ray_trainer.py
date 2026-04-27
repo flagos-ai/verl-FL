@@ -260,7 +260,11 @@ class OneStepOffRayTrainer(RayPPOTrainer):
         actor_rollout_workers = self.actor_wg.workers + self.rollout_wg.workers
         n_workers = len(actor_rollout_workers)
 
-        if self.device_name == "npu":
+        comm_backend = get_nccl_backend()
+        # Ray collective only supports "nccl" and "gloo".  For NPU (hccl) and
+        # FlagCX (heterogeneous) we use torch.distributed-based weight sync
+        # via create_weight_sync_group instead.
+        if self.device_name == "npu" or comm_backend not in ("nccl", "gloo"):
             master_address = ray.get(self.actor_wg.workers[0]._get_node_ip.remote())
             master_port = ray.get(self.actor_wg.workers[0]._get_free_port.remote())
             self.actor_wg.create_weight_sync_group(
@@ -283,7 +287,7 @@ class OneStepOffRayTrainer(RayPPOTrainer):
                 actor_rollout_workers,
                 n_workers,
                 list(range(0, n_workers)),
-                backend=get_nccl_backend(),
+                backend=comm_backend,
                 group_name="actor_rollout",
             )
 

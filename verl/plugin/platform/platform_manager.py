@@ -20,7 +20,7 @@ _current_platform: PlatformBase | None = None
 
 # Built-in platform names that are auto-detected.  Third-party backends can
 # be added via ``set_platform()`` without modifying this list.
-_BUILTIN_PLATFORMS = ("cuda", "npu", "cpu")
+_BUILTIN_PLATFORMS = ("cuda", "npu", "musa", "cpu")
 
 
 def _detect_platform_name() -> str:
@@ -40,13 +40,15 @@ def _detect_platform_name() -> str:
             logger.info("Platform override from VERL_PLATFORM=%s", env_name)
             return env_name
 
-    # 2. Auto-detect CUDA
+    # 2. Auto-detect Moore Threads MUSA  (must come before CUDA because
+    #    torch_musa patches torch.cuda to return True on MUSA devices)
     try:
         import torch
+        import torch_musa  # noqa: F401 – registers torch.musa
 
-        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-            return "cuda"
-    except (ImportError, RuntimeError):
+        if hasattr(torch, "musa") and callable(getattr(torch.musa, "is_available", None)) and torch.musa.is_available():
+            return "musa"
+    except (ImportError, RuntimeError, AttributeError):
         pass
 
     # 3. Auto-detect Ascend NPU
@@ -58,7 +60,16 @@ def _detect_platform_name() -> str:
     except (ImportError, RuntimeError):
         pass
 
-    # 4. Fallback – CPU
+    # 4. Auto-detect CUDA
+    try:
+        import torch
+
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            return "cuda"
+    except (ImportError, RuntimeError):
+        pass
+
+    # 5. Fallback – CPU
     return "cpu"
 
 
@@ -86,6 +97,17 @@ def _create_platform(name: str) -> PlatformBase:
             return PlatformCPU()
         return platform
 
+    if name == "musa":
+        from .platform_musa import PlatformMUSA
+
+        platform = PlatformMUSA()
+        if not platform.is_available():
+            logger.warning("MUSA platform specified but not available. Falling back to CPU.")
+            from .platform_cpu import PlatformCPU
+
+            return PlatformCPU()
+        return platform
+
     if name == "cpu":
         from .platform_cpu import PlatformCPU
 
@@ -103,6 +125,7 @@ def get_platform() -> PlatformBase:
     if _current_platform is None:
         name = _detect_platform_name()
         _current_platform = _create_platform(name)
+        _current_platform.ensure_initialized()
         logger.info("verl platform initialised: %s", _current_platform.device_name)
     return _current_platform
 

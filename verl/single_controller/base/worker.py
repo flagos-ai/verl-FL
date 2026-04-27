@@ -25,6 +25,7 @@ import ray
 from verl.utils.device import (
     get_torch_device,
     get_visible_devices_keyword,
+    is_musa_available,
     is_npu_available,
 )
 
@@ -278,6 +279,17 @@ class Worker(WorkerHelper):
             cuda_val = os.environ.pop("ROCR_VISIBLE_DEVICES")
             os.environ["CUDA_VISIBLE_DEVICES"] = cuda_val
             rocr_val = None
+
+        # Ray sets CUDA_VISIBLE_DEVICES for GPU resource isolation, but torch_musa
+        # ignores it (reads MUSA_VISIBLE_DEVICES instead).  Unlike CUDA/NCCL,
+        # MCCL/FlagCX does not work when MUSA_VISIBLE_DEVICES restricts each
+        # process to a single device.  Instead, keep all devices visible and
+        # use set_device() with the Ray-assigned physical device index.
+        if is_musa_available and cuda_val:
+            musa_device_index = int(cuda_val)
+            os.environ.pop("MUSA_VISIBLE_DEVICES", None)
+            os.environ["LOCAL_RANK"] = str(musa_device_index)
+            get_torch_device().set_device(musa_device_index)
 
         if is_ray_noset_visible_devices:
             # NOTE: Ray will automatically set the *_VISIBLE_DEVICES
