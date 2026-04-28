@@ -128,7 +128,6 @@ class TrainingWorker(Worker, DistProfilerExtension):
         )
 
         self.model_config.model_type = self.config.model_type
-
         self.engine: BaseEngine = EngineRegistry.new(
             model_type=self.config.model_type,
             backend=self.engine_config.strategy,
