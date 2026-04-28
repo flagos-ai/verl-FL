@@ -25,11 +25,13 @@ for _pkg, _rel in [("verl", "verl"), ("verl.plugin", os.path.join("verl", "plugi
 
 # ---------------------------------------------------------------------------
 
+from contextlib import contextmanager  # noqa: E402
 from unittest import mock  # noqa: E402
 
 import pytest  # noqa: E402
 
 from verl.plugin.platform import get_platform, set_platform  # noqa: E402
+from verl.plugin.platform.platform_base import PlatformBase  # noqa: E402
 from verl.plugin.platform.platform_manager import (  # noqa: E402
     _create_platform,
     _detect_platform_name,
@@ -40,84 +42,62 @@ class TestPlatformDetection:
     """Test platform auto-detection logic."""
 
     def setup_method(self):
-        """Reset platform singleton before each test."""
         import verl.plugin.platform.platform_manager as pm
 
         pm._current_platform = None
 
-    def test_verl_platform_env_override_cuda(self):
-        """Test VERL_PLATFORM environment variable override for CUDA."""
+    def test_env_override_cuda(self):
         with mock.patch.dict(os.environ, {"VERL_PLATFORM": "cuda"}):
-            name = _detect_platform_name()
-            assert name == "cuda", f"Expected 'cuda', got '{name}'"
+            assert _detect_platform_name() == "cuda"
 
-    def test_verl_platform_env_override_npu(self):
-        """Test VERL_PLATFORM environment variable override for NPU."""
+    def test_env_override_npu(self):
         with mock.patch.dict(os.environ, {"VERL_PLATFORM": "npu"}):
-            name = _detect_platform_name()
-            assert name == "npu", f"Expected 'npu', got '{name}'"
+            assert _detect_platform_name() == "npu"
 
-    def test_verl_platform_env_override_cpu_rejected(self):
-        """Test that VERL_PLATFORM=cpu is rejected (CPU backend not supported)."""
-        with mock.patch.dict(os.environ, {"VERL_PLATFORM": "cpu"}):
-            # "cpu" is not in _BUILTIN_PLATFORMS, so it falls back to auto-detection
-            name = _detect_platform_name()
-            assert name in ("cuda", "npu"), f"Expected 'cuda' or 'npu', got '{name}'"
-
-    def test_verl_platform_invalid_value(self):
-        """Test that invalid VERL_PLATFORM values fall back to auto-detection."""
+    def test_invalid_value_falls_back(self):
+        """Invalid VERL_PLATFORM falls back to auto-detection."""
         with mock.patch.dict(os.environ, {"VERL_PLATFORM": "invalid"}):
-            name = _detect_platform_name()
-            assert name in ("cuda", "npu"), f"Got invalid platform name: {name}"
+            assert _detect_platform_name() in ("cuda", "npu")
 
-    def test_verl_platform_case_insensitive(self):
-        """Test that VERL_PLATFORM is case-insensitive."""
+    def test_case_insensitive(self):
         with mock.patch.dict(os.environ, {"VERL_PLATFORM": "CUDA"}):
-            name = _detect_platform_name()
-            assert name == "cuda", f"Expected 'cuda', got '{name}'"
+            assert _detect_platform_name() == "cuda"
+
+    def test_empty_triggers_auto_detection(self):
+        with mock.patch.dict(os.environ, {"VERL_PLATFORM": ""}):
+            assert _detect_platform_name() in ("cuda", "npu")
 
 
 class TestPlatformCreation:
-    """Test platform creation and initialization."""
+    """Test platform creation."""
 
-    def setup_method(self):
-        """Reset platform singleton before each test."""
-        import verl.plugin.platform.platform_manager as pm
-
-        pm._current_platform = None
-
-    def test_create_cuda_platform_raises_if_unavailable(self):
-        """Test that CUDA platform raises RuntimeError if not available."""
+    def test_cuda_raises_if_unavailable(self):
         with mock.patch("torch.cuda.is_available", return_value=False):
             with pytest.raises(RuntimeError):
                 _create_platform("cuda")
 
-    def test_create_invalid_platform(self):
-        """Test that invalid platform name raises ValueError."""
+    def test_invalid_platform_raises(self):
         with pytest.raises(ValueError):
             _create_platform("invalid_platform")
 
 
-class TestPlatformInterface:
-    """Test platform interface methods."""
+class TestPlatformSingleton:
+    """Test singleton and external injection."""
 
     def setup_method(self):
-        """Reset platform singleton before each test."""
         import verl.plugin.platform.platform_manager as pm
 
         pm._current_platform = None
 
     def test_get_platform_returns_singleton(self):
-        """Test that get_platform() returns a singleton."""
-        platform1 = get_platform()
-        platform2 = get_platform()
-        assert platform1 is platform2, "get_platform() should return the same instance"
+        p1 = get_platform()
+        p2 = get_platform()
+        assert p1 is p2
 
     def test_set_platform_external_injection(self):
-        """Test external plugin injection via set_platform() (VERL_USE_EXTERNAL_MODULES pattern)."""
-        from verl.plugin.platform.platform_base import PlatformBase
+        """Simulates VERL_USE_EXTERNAL_MODULES plugin calling set_platform()."""
 
-        class MockExternalPlatform(PlatformBase):
+        class MockPlatform(PlatformBase):
             @property
             def device_name(self):
                 return "mock_xpu"
@@ -164,14 +144,9 @@ class TestPlatformInterface:
             def visible_devices_envvar(self):
                 return "MOCK_VISIBLE_DEVICES"
 
+            @contextmanager
             def nvtx_range(self, msg):
-                from contextlib import contextmanager
-
-                @contextmanager
-                def _noop():
-                    yield
-
-                return _noop()
+                yield
 
             def profiler_start(self):
                 pass
@@ -182,38 +157,11 @@ class TestPlatformInterface:
             def cudart(self):
                 return None
 
-        # Simulate external plugin injection
-        custom_platform = MockExternalPlatform()
-        set_platform(custom_platform)
+        custom = MockPlatform()
+        set_platform(custom)
 
-        # Verify get_platform() returns the injected platform
-        retrieved = get_platform()
-        assert retrieved is custom_platform
-        assert retrieved.device_name == "mock_xpu"
-
-
-class TestEnvironmentVariableValidation:
-    """Test VERL_PLATFORM environment variable validation."""
-
-    def setup_method(self):
-        """Reset platform singleton before each test."""
-        import verl.plugin.platform.platform_manager as pm
-
-        pm._current_platform = None
-
-    def test_invalid_platform_falls_back(self):
-        """Test that invalid VERL_PLATFORM values fall back to auto-detection."""
-        with mock.patch.dict(os.environ, {"VERL_PLATFORM": "opencl"}):
-            name = _detect_platform_name()
-            # Should fall back, not return "opencl"
-            assert name != "opencl"
-            assert name in ("cuda", "npu")
-
-    def test_empty_platform_triggers_auto_detection(self):
-        """Test that empty VERL_PLATFORM triggers auto-detection."""
-        with mock.patch.dict(os.environ, {"VERL_PLATFORM": ""}):
-            name = _detect_platform_name()
-            assert name in ("cuda", "npu")
+        assert get_platform() is custom
+        assert get_platform().device_name == "mock_xpu"
 
 
 if __name__ == "__main__":
