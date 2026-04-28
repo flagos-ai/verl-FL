@@ -37,15 +37,13 @@ verl/plugin/platform/
 
 ## Adding a New Chip / Accelerator
 
-To add support for a new backend (e.g. Intel XPU, AMD ROCm, Cambricon MLU):
+New hardware backends should be added via **external plugins** — no changes to
+the verl source tree are required.
 
-### Step 1 — Create the platform file
-
-Create `verl/plugin/platform/platform_xpu.py` (replace `xpu` with your backend
-name):
+### Step 1 — Create a platform class in your plugin package
 
 ```python
-# Copyright (c) BAAI Corporation.
+# my_plugin/platform.py
 
 from contextlib import contextmanager
 from types import ModuleType
@@ -53,7 +51,7 @@ from typing import Any, Optional
 
 import torch
 
-from .platform_base import PlatformBase
+from verl.plugin.platform import PlatformBase, set_platform
 
 
 class PlatformXPU(PlatformBase):
@@ -82,35 +80,30 @@ class PlatformXPU(PlatformBase):
     def synchronize(self, device_index: Optional[int] = None) -> None:
         torch.xpu.synchronize(device_index)
 
-    # -- RNG --
     def manual_seed(self, seed: int) -> None:
         torch.xpu.manual_seed(seed)
 
     def manual_seed_all(self, seed: int) -> None:
         torch.xpu.manual_seed_all(seed)
 
-    # -- Memory --
     def set_allocator_settings(self, settings: str) -> None:
-        pass  # XPU may not support this
+        pass
 
     def empty_cache(self) -> None:
         torch.xpu.empty_cache()
 
-    # -- Device properties --
     def get_device_capability(self, device_index: int = 0) -> tuple[Optional[int], Optional[int]]:
-        return (None, None)  # XPU uses a different capability model
+        return (None, None)
 
-    # -- Communication --
     def communication_backend_name(self) -> str:
-        return "ccl"  # Intel oneCCL
+        return "ccl"
 
     def visible_devices_envvar(self) -> str:
         return "ZE_AFFINITY_MASK"
 
-    # -- Profiling --
     @contextmanager
     def nvtx_range(self, msg: str):
-        yield  # no-op or use Intel ITT
+        yield
 
     def profiler_start(self) -> None:
         pass
@@ -118,58 +111,31 @@ class PlatformXPU(PlatformBase):
     def profiler_stop(self) -> None:
         pass
 
-    # -- Low-level --
     def cudart(self) -> Any:
         return None
+
+
+# Import-time injection: set_platform() is called before get_platform()
+# because VERL_USE_EXTERNAL_MODULES runs in verl/__init__.py before any
+# worker code.
+set_platform(PlatformXPU())
 ```
 
-### Step 2 — Register in the platform manager
+### Step 2 — Load via `VERL_USE_EXTERNAL_MODULES`
 
-Edit `platform_manager.py` and add two things:
-
-**a) Auto-detection** (in `_detect_platform_name()`):
-
-```python
-# Auto-detect Intel XPU
-try:
-    import torch
-    if hasattr(torch, "xpu") and torch.xpu.is_available():
-        return "xpu"
-except (ImportError, RuntimeError):
-    pass
+```bash
+export VERL_USE_EXTERNAL_MODULES=my_plugin.platform
 ```
 
-**b) Instantiation** (in `_create_platform()`):
-
-```python
-if name == "xpu":
-    from .platform_xpu import PlatformXPU
-    return PlatformXPU()
-```
-
-### Step 3 — Done
-
-No other files need modification.  All existing code that uses
-`get_platform()`, `get_device_name()`, `get_torch_device()`, etc. will
-automatically pick up the new backend.
-
-### Alternative: Runtime registration (no file edits)
-
-If you prefer not to modify `platform_manager.py`, you can register a custom
-platform at startup before any other verl code runs:
-
-```python
-from verl.plugin.platform import set_platform
-from my_backend import MyPlatform
-
-set_platform(MyPlatform())
-```
+That's it. `set_platform()` injects the custom platform singleton before any
+verl code calls `get_platform()`. All downstream code (`get_device_name()`,
+`get_torch_device()`, etc.) automatically uses the new backend.
 
 ## PlatformBase Interface Summary
 
 | Category | Method | Description |
 |---|---|---|
-| **Device** | `device_name` | Device type string (`'cuda'`, `'npu'`, `'cpu'`, …) |
+| **Device** | `device_name` | Device type string (`'cuda'`, `'npu'`, `'xpu'`, …) |
 | | `device_module` | `torch.<device>` namespace module |
 | | `is_available()` | Whether the backend is available |
 | | `current_device()` | Current device index |

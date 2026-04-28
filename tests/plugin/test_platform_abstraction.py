@@ -113,6 +113,84 @@ class TestPlatformInterface:
         platform2 = get_platform()
         assert platform1 is platform2, "get_platform() should return the same instance"
 
+    def test_set_platform_external_injection(self):
+        """Test external plugin injection via set_platform() (VERL_USE_EXTERNAL_MODULES pattern)."""
+        from verl.plugin.platform.platform_base import PlatformBase
+
+        class MockExternalPlatform(PlatformBase):
+            @property
+            def device_name(self):
+                return "mock_xpu"
+
+            @property
+            def device_module(self):
+                import torch
+
+                return torch
+
+            def is_available(self):
+                return True
+
+            def current_device(self):
+                return 0
+
+            def device_count(self):
+                return 1
+
+            def set_device(self, device_index):
+                pass
+
+            def synchronize(self, device_index=None):
+                pass
+
+            def manual_seed(self, seed):
+                pass
+
+            def manual_seed_all(self, seed):
+                pass
+
+            def set_allocator_settings(self, settings):
+                pass
+
+            def empty_cache(self):
+                pass
+
+            def get_device_capability(self, device_index=0):
+                return (None, None)
+
+            def communication_backend_name(self):
+                return "mock_ccl"
+
+            def visible_devices_envvar(self):
+                return "MOCK_VISIBLE_DEVICES"
+
+            def nvtx_range(self, msg):
+                from contextlib import contextmanager
+
+                @contextmanager
+                def _noop():
+                    yield
+
+                return _noop()
+
+            def profiler_start(self):
+                pass
+
+            def profiler_stop(self):
+                pass
+
+            def cudart(self):
+                return None
+
+        # Simulate external plugin injection
+        custom_platform = MockExternalPlatform()
+        set_platform(custom_platform)
+
+        # Verify get_platform() returns the injected platform
+        retrieved = get_platform()
+        assert retrieved is custom_platform
+        assert retrieved.device_name == "mock_xpu"
+
 
 class TestEnvironmentVariableValidation:
     """Test VERL_PLATFORM environment variable validation."""
