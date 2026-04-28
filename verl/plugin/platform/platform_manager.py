@@ -61,7 +61,7 @@ def _detect_platform_name() -> str:
     # 4. No accelerator found
     raise RuntimeError(
         "No supported accelerator detected (checked CUDA and NPU). "
-        "Set VERL_PLATFORM to one of %s if detection is incorrect." % (_BUILTIN_PLATFORMS,)
+        f"Set VERL_PLATFORM to one of {_BUILTIN_PLATFORMS} if detection is incorrect."
     )
 
 
