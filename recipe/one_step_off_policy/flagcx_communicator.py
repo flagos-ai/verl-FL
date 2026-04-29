@@ -338,18 +338,34 @@ def _detect_local_device_type() -> str:
 
     In a heterogeneous cluster (e.g. CUDA on node A, MUSA on node B) the
     global platform singleton from ``verl.plugin.platform`` may not reflect
-    the hardware of the *current* node.  This function probes the local
-    runtime directly so that device resolution is always correct.
+    the hardware of the *current* node.
+
+    ``torch_musa`` patches ``torch.musa.is_available()`` and
+    ``torch.musa.device_count()`` to report CUDA devices as MUSA when the
+    package is imported, so API-level checks alone are unreliable.  Instead
+    we attempt to allocate a tiny tensor on each device type — only the
+    device backed by real hardware will succeed.
     """
+    # Try MUSA first (same priority as platform auto-detection)
     try:
         if hasattr(torch, "musa") and callable(getattr(torch.musa, "is_available", None)):
-            if torch.musa.is_available() and torch.musa.device_count() > 0:
+            if torch.musa.is_available():
+                t = torch.zeros(1, device="musa:0")
+                del t
+                print("[_detect_local_device_type] detected MUSA hardware")
                 return "musa"
     except Exception:
         pass
 
-    if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-        return "cuda"
+    # Try CUDA
+    try:
+        if torch.cuda.is_available():
+            t = torch.zeros(1, device="cuda:0")
+            del t
+            print("[_detect_local_device_type] detected CUDA hardware")
+            return "cuda"
+    except Exception:
+        pass
 
     raise RuntimeError(
         "No CUDA or MUSA device found on this node. "
