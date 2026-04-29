@@ -30,20 +30,37 @@ from transformers import PreTrainedTokenizer
 
 from verl.utils.device import get_device_name, get_torch_device
 
-try:
-    from flash_attn.ops.triton.cross_entropy import cross_entropy_loss
+# Lazy-initialised availability flags.  Importing flash_attn / torch_npu at
+# module level can fail on MUSA environments because verl's package init
+# triggers the import before torch_musa is fully initialised.  Deferring the
+# probe to first use avoids the circular-import AttributeError while still
+# letting flash_attn cross-entropy work normally once the runtime is ready.
+_FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE: bool | None = None
+_NPU_CROSS_ENTROPY_LOSS_AVAILABLE: bool | None = None
 
-    FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE = True
-except ImportError:
-    FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE = False
+
+def _is_flash_attn_cross_entropy_available() -> bool:
+    global _FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE
+    if _FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE is None:
+        try:
+            from flash_attn.ops.triton.cross_entropy import cross_entropy_loss  # noqa: F401
+
+            _FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE = True
+        except (ImportError, AttributeError):
+            _FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE = False
+    return _FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE
 
 
-try:
-    import torch_npu
+def _is_npu_cross_entropy_available() -> bool:
+    global _NPU_CROSS_ENTROPY_LOSS_AVAILABLE
+    if _NPU_CROSS_ENTROPY_LOSS_AVAILABLE is None:
+        try:
+            import torch_npu
 
-    NPU_CROSS_ENTROPY_LOSS_AVAILABLE = hasattr(torch_npu, "npu_cross_entropy_loss")
-except ImportError:
-    NPU_CROSS_ENTROPY_LOSS_AVAILABLE = False
+            _NPU_CROSS_ENTROPY_LOSS_AVAILABLE = hasattr(torch_npu, "npu_cross_entropy_loss")
+        except (ImportError, AttributeError):
+            _NPU_CROSS_ENTROPY_LOSS_AVAILABLE = False
+    return _NPU_CROSS_ENTROPY_LOSS_AVAILABLE
 
 
 def gather_from_labels(data: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
@@ -86,14 +103,14 @@ def logprobs_from_logits(logits, labels, inplace_backward=True):
     Returns:
         Tensor: Log-probabilities of the target labels, shape logits.shape[:-1].
     """
-    if FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE:
+    if _is_flash_attn_cross_entropy_available():
         batch_dim = logits.shape[:-1]
         last_dim = logits.shape[-1]
         logits = logits.reshape(-1, last_dim)
         labels = labels.reshape(-1)
         output = logprobs_from_logits_flash_attn(logits, labels, inplace_backward=inplace_backward)
         output = output.view(*batch_dim)
-    elif NPU_CROSS_ENTROPY_LOSS_AVAILABLE:
+    elif _is_npu_cross_entropy_available():
         output = logprobs_from_logits_torch_npu(logits, labels)
     else:
         output = logprobs_from_logits_v2(logits, labels)
@@ -119,6 +136,8 @@ def logprobs_from_logits_flash_attn(
     Raises:
         AssertionError: If flash-attn version < 2.4.3 (different return format).
     """
+    from flash_attn.ops.triton.cross_entropy import cross_entropy_loss
+
     output = cross_entropy_loss(logits, labels, inplace_backward=inplace_backward)
     assert isinstance(output, tuple), (
         "please make sure flash-attn>=2.4.3 where cross_entropy_loss returns Tuple[losses, z_losses]."
@@ -141,6 +160,8 @@ def logprobs_from_logits_torch_npu(logits: torch.Tensor, labels: torch.Tensor) -
     """
     batch_dim = logits.shape[:-1]
     logits = logits.reshape(-1, logits.shape[-1])
+    import torch_npu
+
     loss, _, _, _ = torch_npu.npu_cross_entropy_loss(logits, labels.reshape(-1), reduction="none")
     return -loss.view(*batch_dim)
 
