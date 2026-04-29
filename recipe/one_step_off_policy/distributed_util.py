@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from verl.utils.device import is_npu_available
+from verl.utils.device import get_nccl_backend, is_npu_available
 
 
 def vllm_stateless_init_process_group(master_address, master_port, rank, world_size, device):
@@ -21,21 +21,23 @@ def vllm_stateless_init_process_group(master_address, master_port, rank, world_s
     vLLM provides `StatelessProcessGroup` to create a process group
     without considering the global process group in torch.distributed.
     It is recommended to create `StatelessProcessGroup`, and then initialize
-    the data-plane communication (NCCL) between external (train processes)
-    and vLLM workers.
+    the data-plane communication (NCCL/FlagCX/HCCL) between external
+    (train processes) and vLLM workers.
     """
-    # NOTE: If it is necessary to support weight synchronization with the sglang backend in the future,
-    # the following can be used:
-    # from sglang.srt.distributed.device_communicators.pynccl import PyNcclCommunicator
-    # from sglang.srt.distributed.utils import statelessprocessgroup
-    if is_npu_available:
+    from vllm.distributed.utils import StatelessProcessGroup
+
+    pg = StatelessProcessGroup.create(host=master_address, port=master_port, rank=rank, world_size=world_size)
+
+    comm_backend = get_nccl_backend()
+    if comm_backend == "flagcx":
+        from recipe.one_step_off_policy.flagcx_communicator import PyFlagcxCommunicator
+
+        return PyFlagcxCommunicator(pg, device=device)
+    elif is_npu_available:
         from vllm_ascend.distributed.device_communicators.pyhccl import (
             PyHcclCommunicator as PyNcclCommunicator,
         )
     else:
         from vllm.distributed.device_communicators.pynccl import PyNcclCommunicator
-    from vllm.distributed.utils import StatelessProcessGroup
 
-    pg = StatelessProcessGroup.create(host=master_address, port=master_port, rank=rank, world_size=world_size)
-    pynccl = PyNcclCommunicator(pg, device=device)
-    return pynccl
+    return PyNcclCommunicator(pg, device=device)
