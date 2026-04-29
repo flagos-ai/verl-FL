@@ -162,19 +162,11 @@ def set_expandable_segments(enable: bool) -> None:
 def auto_set_device(config) -> None:
     """Automatically configure device name for different accelerators.
 
-    Also disables Ray's ``CUDA_VISIBLE_DEVICES`` isolation when FlagCX is the
-    communication backend, because FlagCX enumerates physical GPUs via the
-    driver API and corrupts the CUDA runtime when visibility is restricted.
-
     Args:
         config: Configuration object with trainer.device attribute.
     """
-    import os
-
-    platform = get_platform()
-
     if config and hasattr(config, "trainer") and hasattr(config.trainer, "device"):
-        detected = platform.device_name
+        detected = get_platform().device_name
         # Only override when the config value doesn't match the detected platform
         if detected != "cpu" and config.trainer.device != detected:
             if config.trainer.device != "cpu":
@@ -183,13 +175,6 @@ def auto_set_device(config) -> None:
                     f"{detected}, automatically set to `{detected}` instead."
                 )
             config.trainer.device = detected
-
-    # FlagCX bypasses CUDA_VISIBLE_DEVICES via driver API and corrupts the
-    # CUDA runtime when Ray restricts each worker to one visible device.
-    # Disable Ray's automatic CUDA_VISIBLE_DEVICES so all GPUs stay visible;
-    # worker.py will bind via set_device() using Ray's accelerator IDs.
-    if platform.device_name == "cuda" and platform.communication_backend_name() == "flagcx":
-        os.environ.setdefault("RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES", "1")
 
 
 # ---------------------------------------------------------------------------

@@ -291,6 +291,20 @@ class Worker(WorkerHelper):
             os.environ["LOCAL_RANK"] = str(musa_device_index)
             get_torch_device().set_device(musa_device_index)
 
+        # FlagCX discovers GPU topology via sysfs and uses physical device
+        # indices internally.  When Ray restricts CUDA_VISIBLE_DEVICES to a
+        # single device, FlagCX's physical indices exceed the runtime's
+        # visible range, causing "invalid device ordinal".  Remove the
+        # restriction so all GPUs stay visible, then bind via set_device().
+        if is_cuda_available and not is_musa_available and cuda_val:
+            from verl.utils.device import get_nccl_backend
+
+            if get_nccl_backend() == "flagcx":
+                cuda_device_index = int(cuda_val)
+                os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+                os.environ["LOCAL_RANK"] = str(cuda_device_index)
+                get_torch_device().set_device(cuda_device_index)
+
         if is_ray_noset_visible_devices:
             # NOTE: Ray will automatically set the *_VISIBLE_DEVICES
             # environment variable for each actor, unless
