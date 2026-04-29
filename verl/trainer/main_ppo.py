@@ -28,7 +28,7 @@ from verl.trainer.ppo.ray_trainer import RayPPOTrainer
 from verl.trainer.ppo.reward import load_reward_manager
 from verl.trainer.ppo.utils import need_critic, need_reference_policy
 from verl.utils.config import validate_config
-from verl.utils.device import auto_set_device, is_cuda_available
+from verl.utils.device import auto_set_device, get_nccl_backend, is_cuda_available
 from verl.utils.import_utils import load_extern_object
 
 
@@ -70,6 +70,14 @@ def run_ppo(config, task_runner_class=None) -> None:
             runtime_env_vars = runtime_env_kwargs.get("env_vars", {})
             runtime_env_vars["TRANSFER_QUEUE_ENABLE"] = "1"
             runtime_env_kwargs["env_vars"] = runtime_env_vars
+
+        # FlagCX bypasses CUDA_VISIBLE_DEVICES via driver API and corrupts
+        # the CUDA runtime when Ray restricts each worker to one device.
+        # Prevent Ray from setting CUDA_VISIBLE_DEVICES so all GPUs stay
+        # visible; worker.py will bind via set_device() using Ray's
+        # accelerator IDs instead.
+        if is_cuda_available and get_nccl_backend() == "flagcx":
+            os.environ.setdefault("RAY_EXPERIMENTAL_NOSET_CUDA_VISIBLE_DEVICES", "1")
 
         runtime_env = OmegaConf.merge(default_runtime_env, runtime_env_kwargs)
         ray_init_kwargs = OmegaConf.create({**ray_init_kwargs, "runtime_env": runtime_env})
