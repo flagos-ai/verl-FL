@@ -459,6 +459,15 @@ class PyFlagcxCommunicator:
                 self.world_size, ctypes.byref(self.unique_id), self.rank
             )
             print(f"[PyFlagcxCommunicator] rank={self.rank} CommInitRank done, running warmup broadcast...")
+
+            # flagcxCommInitRank may internally call setDevice to a device
+            # index outside this process's CUDA_VISIBLE_DEVICES scope,
+            # corrupting the CUDA runtime state.  Re-set the device explicitly.
+            if self.device.type == "cuda":
+                torch.cuda.set_device(self.device)
+            elif self.device.type == "musa":
+                torch.musa.set_device(self.device)
+
             # Warmup broadcast
             data = torch.zeros(1, device=self.device)
             self.broadcast(data, src=0)
