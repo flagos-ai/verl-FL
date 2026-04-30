@@ -20,7 +20,67 @@ from datetime import timedelta
 import ray
 import torch.distributed
 
-from verl.utils.device import get_device_name, get_nccl_backend, get_torch_device, is_npu_available
+from verl.utils.device import get_dist_backend, get_nccl_backend, get_torch_device, is_npu_available
+
+
+def init_device_mesh_hetero(device_type, mesh_shape, mesh_dim_names=None):
+    """FlagCX-compatible init_device_mesh that supports heterogeneous device types.
+
+    In heterogeneous environments (e.g. MUSA x NVIDIA), different ranks have
+    different device_type (musa vs cuda). Standard init_device_mesh requires
+    all ranks to pass the same device_type, which fails. This function uses
+    dist.new_group + DeviceMesh.from_group to bypass that restriction when
+    FlagCX is the communication backend.
+    """
+    if get_nccl_backend() != "flagcx":
+        from torch.distributed.device_mesh import init_device_mesh
+
+        return init_device_mesh(device_type, mesh_shape, mesh_dim_names=mesh_dim_names)
+
+    import itertools
+    import math
+
+    import torch
+    import torch.distributed as dist
+    from torch.distributed.device_mesh import DeviceMesh
+
+    rank = dist.get_rank()
+    backend = get_dist_backend()
+    total = math.prod(mesh_shape)
+    mesh_tensor = torch.arange(total).reshape(mesh_shape)
+    ndim = len(mesh_shape)
+
+    if ndim == 1:
+        # If the group covers all ranks, reuse the default pg to avoid
+        # creating a redundant FlagCX communicator (which can fail and
+        # corrupt the default pg state on some platforms like MUSA).
+        if total == dist.get_world_size():
+            group = dist.distributed_c10d._get_default_group()
+        else:
+            group = dist.new_group(ranks=list(range(total)), backend=backend)
+        return DeviceMesh.from_group(group, device_type, mesh_tensor, mesh_dim_names=mesh_dim_names)
+
+    # Multi-dim: create subgroups for each dimension
+    my_groups = []
+    for dim in range(ndim):
+        other_dims = [d for d in range(ndim) if d != dim]
+        other_ranges = [range(mesh_shape[d]) for d in other_dims]
+
+        my_group = None
+        for combo in itertools.product(*other_ranges):
+            idx = [None] * ndim
+            for i, d in enumerate(other_dims):
+                idx[d] = combo[i]
+            idx[dim] = slice(None)
+
+            ranks = mesh_tensor[tuple(idx)].flatten().tolist()
+            g = dist.new_group(ranks=ranks, backend=backend)
+            if rank in ranks:
+                my_group = g
+
+        my_groups.append(my_group)
+
+    return DeviceMesh.from_group(my_groups, device_type, mesh_tensor, mesh_dim_names=mesh_dim_names)
 
 
 def set_numa_affinity():
@@ -53,7 +113,7 @@ def set_numa_affinity():
 
 def initialize_global_process_group(timeout_second=36000):
     torch.distributed.init_process_group(
-        get_nccl_backend(),
+        get_dist_backend(),
         timeout=timedelta(seconds=timeout_second),
         init_method=os.environ.get("DIST_INIT_METHOD", None),
     )
@@ -82,7 +142,7 @@ def initialize_global_process_group_ray(timeout_second=None):
         rank = int(os.environ.get("RANK", 0))
         world_size = int(os.environ.get("WORLD_SIZE", 1))
         torch.distributed.init_process_group(
-            backend=f"cpu:gloo,{get_device_name()}:{get_nccl_backend()}",
+            backend=get_dist_backend(),
             rank=rank,
             world_size=world_size,
             timeout=timeout,

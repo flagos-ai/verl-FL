@@ -259,10 +259,17 @@ class OneStepOffRayTrainer(RayPPOTrainer):
 
         actor_rollout_workers = self.actor_wg.workers + self.rollout_wg.workers
         n_workers = len(actor_rollout_workers)
+        comm_backend = get_nccl_backend()
 
-        if self.device_name == "npu":
+        if self.device_name == "npu" or comm_backend == "flagcx":
+            # NPU and FlagCX: use StatelessProcessGroup + dedicated communicator
             master_address = ray.get(self.actor_wg.workers[0]._get_node_ip.remote())
             master_port = ray.get(self.actor_wg.workers[0]._get_free_port.remote())
+            print(
+                f"[WEIGHT-SYNC] Using StatelessProcessGroup path: "
+                f"comm_backend={comm_backend}, master={master_address}:{master_port}, "
+                f"n_actors={len(self.actor_wg.workers)}, n_rollout={len(self.rollout_wg.workers)}"
+            )
             self.actor_wg.create_weight_sync_group(
                 master_address,
                 master_port,
@@ -278,12 +285,12 @@ class OneStepOffRayTrainer(RayPPOTrainer):
                 )
             )
         else:
-            # Create Ray collective group for fallback communication
+            # CUDA: use Ray collective group
             collective.create_collective_group(
                 actor_rollout_workers,
                 n_workers,
                 list(range(0, n_workers)),
-                backend=get_nccl_backend(),
+                backend=comm_backend,
                 group_name="actor_rollout",
             )
 

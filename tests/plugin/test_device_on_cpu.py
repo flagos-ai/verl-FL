@@ -42,7 +42,7 @@ class TestGetDeviceName:
 
         result = get_device_name()
         assert isinstance(result, str)
-        assert result in ("cuda", "npu", "cpu")
+        assert result in ("cuda", "npu", "musa", "cpu")
 
 
 class TestGetVisibleDevicesKeyword:
@@ -52,7 +52,7 @@ class TestGetVisibleDevicesKeyword:
         from verl.utils.device import get_visible_devices_keyword
 
         result = get_visible_devices_keyword()
-        assert result in ("CUDA_VISIBLE_DEVICES", "ASCEND_RT_VISIBLE_DEVICES")
+        assert result in ("CUDA_VISIBLE_DEVICES", "ASCEND_RT_VISIBLE_DEVICES", "MUSA_VISIBLE_DEVICES")
 
 
 class TestAutoSetDevice:

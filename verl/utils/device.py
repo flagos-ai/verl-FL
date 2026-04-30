@@ -43,6 +43,40 @@ is_cuda_available = torch.cuda.is_available()
 is_npu_available = is_torch_npu_available()
 
 
+def is_torch_musa_available(check_device=True) -> bool:
+    """Check if Moore Threads MUSA is available for PyTorch operations.
+
+    Checks ``sys.modules`` instead of ``hasattr(torch, "musa")`` to avoid
+    triggering ``torch.__getattr__("musa")`` which would attempt
+    ``import torch_musa`` and can leave a half-initialised module in
+    ``sys.modules``, breaking later imports (e.g. from flash_attn).
+
+    Args:
+        check_device : only check torch_musa package or strictly check if MUSA device is available
+
+    Returns:
+        bool: True if MUSA is available, False otherwise.
+    """
+    try:
+        import sys
+
+        if "torch_musa" not in sys.modules:
+            return False
+
+        if not hasattr(torch, "musa"):
+            return False
+
+        if check_device:
+            return torch.musa.is_available()
+        else:
+            return True
+    except Exception:
+        return False
+
+
+is_musa_available = is_torch_musa_available()
+
+
 # ---------------------------------------------------------------------------
 # Device info helpers
 # ---------------------------------------------------------------------------
@@ -91,6 +125,19 @@ def get_nccl_backend() -> str:
         str: Backend name ('nccl', 'hccl', 'gloo', …).
     """
     return get_platform().communication_backend_name()
+
+
+def get_dist_backend() -> str:
+    """Get the compound backend string for ``init_process_group``.
+
+    Returns ``"gloo"`` on CPU, otherwise ``"cpu:gloo,<device>:<comm>"``
+    (e.g. ``"cpu:gloo,cuda:nccl"``, ``"cpu:gloo,musa:flagcx"``).
+    Works for any device type — no device-specific branches needed.
+    """
+    device_name = get_device_name()
+    if device_name == "cpu":
+        return "gloo"
+    return f"cpu:gloo,{device_name}:{get_nccl_backend()}"
 
 
 # ---------------------------------------------------------------------------

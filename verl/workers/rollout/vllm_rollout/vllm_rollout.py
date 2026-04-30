@@ -55,7 +55,7 @@ from packaging import version as vs
 
 from verl import DataProto
 from verl.third_party.vllm import VLLM_SLEEP_LEVEL, get_version
-from verl.utils.device import is_npu_available
+from verl.utils.device import is_musa_available, is_npu_available
 from verl.utils.distributed import initialize_global_process_group_ray
 from verl.utils.ray_utils import ray_noset_visible_devices
 from verl.utils.vllm import TensorLoRARequest, VLLMHijack, is_version_ge
@@ -103,7 +103,8 @@ def _monkey_patch_compute_logits(model, vocab_size: int):
         **kwargs,
     ) -> torch.Tensor:
         logits = original_compute_logits(*args, **kwargs)
-        logits[..., vocab_size:] = float("-inf")
+        if logits.shape[-1] > vocab_size:
+            logits[..., vocab_size:] = float("-inf")
         return logits
 
     model.compute_logits = MethodType(compute_logits, model)
@@ -181,11 +182,19 @@ class vLLMAsyncRollout(BaseRollout):
             initialize_global_process_group_ray()
         all_kwargs[0]["rank"] = int(os.environ["RANK"])
         device_name = "NPU" if is_npu_available else "GPU"
-        all_kwargs[0]["local_rank"] = (
-            0
-            if not ray_noset_visible_devices()
-            else int(ray.get_runtime_context().get_accelerator_ids()[device_name][0])
-        )
+        if ray_noset_visible_devices():
+            local_rank = int(ray.get_runtime_context().get_accelerator_ids()[device_name][0])
+        elif is_musa_available:
+            # MUSA workers see all devices (no MUSA_VISIBLE_DEVICES isolation),
+            # so use the LOCAL_RANK set by worker.py (physical device index).
+            local_rank = int(os.environ.get("LOCAL_RANK", 0))
+            # Disable torch.compile/inductor on MUSA: the standard triton NVIDIA
+            # backend tries to link libcuda.so which doesn't exist on MUSA nodes.
+            torch._dynamo.config.disable = True
+        else:
+            # CUDA: Ray sets CUDA_VISIBLE_DEVICES to a single device, so 0 is correct.
+            local_rank = 0
+        all_kwargs[0]["local_rank"] = local_rank
         self.vllm_config = all_kwargs[0]["vllm_config"]
         if self.lora_config:
             lora_dtype = getattr(torch, self.config.dtype)
@@ -207,7 +216,15 @@ class vLLMAsyncRollout(BaseRollout):
 
     def _load_model(self, *args, **kwargs):
         self.inference_engine.load_model(*args, **kwargs)
-        _monkey_patch_compute_logits(self.inference_engine.worker.model_runner.model, len(self.tokenizer))
+        model = self.inference_engine.worker.model_runner.model
+        # Workaround: vllm_fl dummy weight loader may create weights on CPU
+        # for non-CUDA platforms (e.g. MUSA). Move model to the worker device.
+        target_device = self.inference_engine.worker.device
+        first_param = next(model.parameters(), None)
+        if first_param is not None and first_param.device.type == "cpu" and target_device.type != "cpu":
+            logger.info(f"Moving model from CPU to {target_device} (dummy weight loader workaround)")
+            model.to(target_device)
+        _monkey_patch_compute_logits(model, len(self.tokenizer))
 
     async def _execute_method(self, method: str | bytes, *args, **kwargs):
         if method == "init_worker":

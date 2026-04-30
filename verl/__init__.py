@@ -18,10 +18,17 @@ import os
 
 from packaging.version import parse as parse_version
 
-from .protocol import DataProto
-from .utils.device import is_npu_available
+# Initialise the platform singleton early so that third-party backend
+# libraries (e.g. torch_musa) are fully loaded before downstream imports
+# (transformers, accelerate, flash_attn) that may depend on them.
+from .plugin.platform import get_platform as _get_platform
 from .utils.import_utils import import_external_libs
 from .utils.logging_utils import set_basic_config
+
+_get_platform()
+
+from .protocol import DataProto  # noqa: E402
+from .utils.device import is_npu_available  # noqa: E402
 
 version_folder = os.path.dirname(os.path.join(os.path.abspath(__file__)))
 
