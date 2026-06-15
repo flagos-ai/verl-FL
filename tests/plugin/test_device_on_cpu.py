@@ -10,7 +10,7 @@ class TestGetNcclBackend:
     """Tests for get_nccl_backend with FlagCX support."""
 
     def test_flagcx_backend_when_enabled(self):
-        with patch.dict(os.environ, {"USE_FLAGCX": "1"}, clear=False):
+        with patch.dict(os.environ, {"USE_FLAGCX": "1", "FLAGCX_PATH": "/opt/flagcx"}, clear=False):
             from verl.utils.device import get_nccl_backend
 
             assert get_nccl_backend() == "flagcx"
@@ -27,7 +27,9 @@ class TestGetNcclBackend:
                 assert result == "nccl"
 
     def test_flagcx_not_enabled_when_zero(self):
-        with patch.dict(os.environ, {"USE_FLAGCX": "0"}, clear=False):
+        env = {k: v for k, v in os.environ.items() if k not in ("USE_FLAGCX", "FLAGCX_PATH")}
+        env["USE_FLAGCX"] = "0"
+        with patch.dict(os.environ, env, clear=True):
             from verl.utils.device import get_nccl_backend
 
             result = get_nccl_backend()
