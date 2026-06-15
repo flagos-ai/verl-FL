@@ -89,16 +89,54 @@ class TestFLEnvManagerFlagGems:
 
 
 class TestFLEnvManagerFlagCX:
-    """Tests for FlagCX enabled check."""
+    """Tests for FlagCX enabled check.
 
-    def test_flagcx_enabled_when_path_set(self):
-        with patch.dict(os.environ, {"FLAGCX_PATH": "/opt/flagcx"}, clear=False):
+    USE_FLAGCX and FLAGCX_PATH must be set together or both unset.
+    """
+
+    def test_flagcx_enabled_when_both_set(self):
+        with patch.dict(os.environ, {"USE_FLAGCX": "1", "FLAGCX_PATH": "/opt/flagcx"}, clear=False):
             assert FLEnvManager.is_flagcx_enabled() is True
 
-    def test_flagcx_disabled_when_path_unset(self):
-        env = {k: v for k, v in os.environ.items() if k != "FLAGCX_PATH"}
+    def test_flagcx_enabled_with_true_string(self):
+        with patch.dict(os.environ, {"USE_FLAGCX": "true", "FLAGCX_PATH": "/opt/flagcx"}, clear=False):
+            assert FLEnvManager.is_flagcx_enabled() is True
+
+    def test_flagcx_disabled_when_both_unset(self):
+        env = {k: v for k, v in os.environ.items() if k not in ("USE_FLAGCX", "FLAGCX_PATH")}
         with patch.dict(os.environ, env, clear=True):
             assert FLEnvManager.is_flagcx_enabled() is False
+
+    def test_flagcx_disabled_when_explicitly_zero_no_path(self):
+        env = {k: v for k, v in os.environ.items() if k not in ("USE_FLAGCX", "FLAGCX_PATH")}
+        env["USE_FLAGCX"] = "0"
+        with patch.dict(os.environ, env, clear=True):
+            assert FLEnvManager.is_flagcx_enabled() is False
+
+    def test_flagcx_raises_when_use_flagcx_set_but_path_missing(self):
+        """USE_FLAGCX=1 without FLAGCX_PATH should raise AssertionError."""
+        env = {k: v for k, v in os.environ.items() if k != "FLAGCX_PATH"}
+        env["USE_FLAGCX"] = "1"
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(AssertionError, match="USE_FLAGCX is set but FLAGCX_PATH is not defined"):
+                FLEnvManager.is_flagcx_enabled()
+
+    def test_flagcx_raises_when_path_set_but_use_flagcx_disabled(self):
+        """FLAGCX_PATH set without USE_FLAGCX=1 should raise AssertionError."""
+        env = {k: v for k, v in os.environ.items() if k != "USE_FLAGCX"}
+        env["USE_FLAGCX"] = "0"
+        env["FLAGCX_PATH"] = "/opt/flagcx"
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(AssertionError, match="USE_FLAGCX is not enabled but FLAGCX_PATH is defined"):
+                FLEnvManager.is_flagcx_enabled()
+
+    def test_flagcx_raises_when_path_set_but_use_flagcx_unset(self):
+        """FLAGCX_PATH set without USE_FLAGCX should raise AssertionError."""
+        env = {k: v for k, v in os.environ.items() if k != "USE_FLAGCX"}
+        env["FLAGCX_PATH"] = "/opt/flagcx"
+        with patch.dict(os.environ, env, clear=True):
+            with pytest.raises(AssertionError, match="USE_FLAGCX is not enabled but FLAGCX_PATH is defined"):
+                FLEnvManager.is_flagcx_enabled()
 
 
 class TestFLEnvManagerGetEnv:
@@ -220,6 +258,7 @@ class TestFLEnvManagerSummary:
         env_keys = FLEnvManager.TRAINING_ENV_KEYS + FLEnvManager.ROLLOUT_ENV_KEYS + FLEnvManager.COMMON_ENV_KEYS
         env = {k: v for k, v in os.environ.items() if k not in env_keys}
         env["FLAGCX_PATH"] = "/opt/flagcx"
+        env["USE_FLAGCX"] = "1"
         with patch.dict(os.environ, env, clear=True):
             summary = FLEnvManager.get_summary()
             assert "FlagCX" in summary
@@ -232,6 +271,7 @@ class TestFLEnvManagerSummary:
                 "TE_FL_PREFER": "flagos",
                 "VLLM_FL_PREFER": "flagos",
                 "USE_FLAGGEMS": "true",
+                "USE_FLAGCX": "1",
                 "FLAGCX_PATH": "/opt/flagcx",
             }
         )
