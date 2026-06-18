@@ -20,7 +20,7 @@ _current_platform: PlatformBase | None = None
 
 # Built-in platform names that are auto-detected.  Third-party backends can
 # be added via ``set_platform()`` without modifying this list.
-_BUILTIN_PLATFORMS = ("cuda", "npu", "musa", "cpu")
+_BUILTIN_PLATFORMS = ("cuda", "npu", "musa","enflame", "cpu")
 
 
 def _detect_platform_name() -> str:
@@ -40,7 +40,18 @@ def _detect_platform_name() -> str:
             logger.info("Platform override from VERL_PLATFORM=%s", env_name)
             return env_name
 
-    # 2. Auto-detect Moore Threads MUSA  (must come before CUDA because
+    # 2. Auto-detect Enflame GCU  (must come before CUDA because
+    #    torch_gcu may patch torch.cuda to return True on GCU devices)
+    try:
+        import torch
+        import torch_gcu  # noqa: F401 – registers torch.gcu
+
+        if hasattr(torch, "gcu") and callable(getattr(torch.gcu, "is_available", None)) and torch.gcu.is_available():
+            return "enflame"
+    except (ImportError, RuntimeError, AttributeError):
+        pass
+
+    # 3. Auto-detect Moore Threads MUSA  (must come before CUDA because
     #    torch_musa patches torch.cuda to return True on MUSA devices)
     try:
         import torch
@@ -51,7 +62,7 @@ def _detect_platform_name() -> str:
     except (ImportError, RuntimeError, AttributeError):
         pass
 
-    # 3. Auto-detect Ascend NPU
+    # 4. Auto-detect Ascend NPU
     try:
         import torch
 
@@ -60,7 +71,7 @@ def _detect_platform_name() -> str:
     except (ImportError, RuntimeError):
         pass
 
-    # 4. Auto-detect CUDA
+    # 5. Auto-detect CUDA
     try:
         import torch
 
@@ -69,12 +80,23 @@ def _detect_platform_name() -> str:
     except (ImportError, RuntimeError):
         pass
 
-    # 5. Fallback – CPU
+    # 6. Fallback – CPU
     return "cpu"
 
 
 def _create_platform(name: str) -> PlatformBase:
     """Instantiate the concrete platform for *name*."""
+    if name == "enflame":
+        from .platform_enflame import PlatformENFLAME
+
+        platform = PlatformENFLAME()
+        if not platform.is_available():
+            logger.warning("ENFLAME platform specified but not available. Falling back to CPU.")
+            from .platform_cpu import PlatformCPU
+
+            return PlatformCPU()
+        return platform
+
     if name == "cuda":
         from .platform_cuda import PlatformCUDA
 
