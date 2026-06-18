@@ -97,7 +97,7 @@ def get_dist_backend() -> str:
     """Get the compound backend string for ``init_process_group``.
 
     Returns ``"gloo"`` on CPU, otherwise ``"cpu:gloo,<device>:<comm>"``
-    (e.g. ``"cpu:gloo,cuda:nccl"``, ``"cpu:gloo,musa:flagcx"``).
+    (e.g. ``"cpu:gloo,cuda:nccl"``, ``"cpu:gloo,musa:flagcx"``, ``"cpu:gloo,gcu:eccl"``).
     Works for any device type — no device-specific branches needed.
     """
     device_name = get_device_name()

@@ -63,11 +63,17 @@ class TestPlatformDetection:
             name = _detect_platform_name()
             assert name == "cpu", f"Expected 'cpu', got '{name}'"
 
+    def test_verl_platform_env_override_enflame(self):
+        """Test VERL_PLATFORM environment variable override for ENFLAME."""
+        with mock.patch.dict(os.environ, {"VERL_PLATFORM": "gcu"}):
+            name = _detect_platform_name()
+            assert name == "gcu", f"Expected 'gcu', got '{name}'"
+
     def test_verl_platform_invalid_value(self):
         """Test that invalid VERL_PLATFORM values fall back to auto-detection."""
         with mock.patch.dict(os.environ, {"VERL_PLATFORM": "invalid"}):
             name = _detect_platform_name()
-            assert name in ("cuda", "npu", "cpu"), f"Got invalid platform name: {name}"
+            assert name in ("cuda", "npu", "musa", "gcu", "cpu"), f"Got invalid platform name: {name}"
 
     def test_verl_platform_case_insensitive(self):
         """Test that VERL_PLATFORM is case-insensitive."""
@@ -208,6 +214,45 @@ class TestCPUPlatformDeviceCount:
                 assert count != 0, "device_count should never return 0"
 
 
+class TestPlatformENFLAME:
+    """Test Enflame GCU platform interface."""
+
+    def test_communication_backend_eccl_default(self):
+        from verl.plugin.platform.platform_enflame import PlatformENFLAME
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            platform = PlatformENFLAME()
+            assert platform.communication_backend_name() == "eccl"
+
+    def test_communication_backend_flagcx_when_enabled(self):
+        from verl.plugin.platform.platform_enflame import PlatformENFLAME
+
+        with mock.patch.dict(os.environ, {"USE_FLAGCX": "1"}, clear=False):
+            platform = PlatformENFLAME()
+            assert platform.communication_backend_name() == "flagcx"
+
+    def test_visible_devices_envvar(self):
+        from verl.plugin.platform.platform_enflame import PlatformENFLAME
+
+        platform = PlatformENFLAME()
+        assert platform.visible_devices_envvar() == "TOPS_VISIBLE_DEVICES"
+
+    def test_device_name(self):
+        from verl.plugin.platform.platform_enflame import PlatformENFLAME
+
+        platform = PlatformENFLAME()
+        assert platform.device_name == "enflame"
+
+    def test_create_enflame_platform_fallback(self):
+        """Test that ENFLAME platform falls back to CPU if torch_gcu is unavailable."""
+        with mock.patch(
+            "verl.plugin.platform.platform_enflame.PlatformENFLAME.is_available",
+            return_value=False,
+        ):
+            platform = _create_platform("enflame")
+            assert platform.device_name == "cpu"
+
+
 class TestEnvironmentVariableValidation:
     """Test VERL_PLATFORM environment variable validation."""
 
@@ -223,13 +268,13 @@ class TestEnvironmentVariableValidation:
             name = _detect_platform_name()
             # Should fall back, not return "opencl"
             assert name != "opencl"
-            assert name in ("cuda", "npu", "cpu")
+            assert name in ("cuda", "npu", "musa", "enflame", "cpu")
 
     def test_empty_platform_triggers_auto_detection(self):
         """Test that empty VERL_PLATFORM triggers auto-detection."""
         with mock.patch.dict(os.environ, {"VERL_PLATFORM": ""}):
             name = _detect_platform_name()
-            assert name in ("cuda", "npu", "cpu")
+            assert name in ("cuda", "npu", "musa", "enflame", "cpu")
 
 
 if __name__ == "__main__":

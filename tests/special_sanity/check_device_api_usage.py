@@ -28,6 +28,7 @@ CUDA_KEYWORD_CHECK_WHITELIST = [
     "verl/plugin/platform/platform_base.py",  # docstring mentions torch.cuda
     "verl/plugin/platform/platform_cuda.py",  # CUDA platform implementation
     "verl/plugin/platform/platform_musa.py",  # MUSA platform patches cuda_stream for FlagCX compat
+    "verl/plugin/platform/platform_enflame.py",  # ENFLAME platform patches cuda_stream for FlagCX compat
     "verl/plugin/platform/platform_manager.py",  # platform auto-detection probes torch.cuda
     "recipe/prime/prime_ray_trainer.py",  # appear in default device_name
     "recipe/spin/spin_trainer.py",  # appear in default device_name
