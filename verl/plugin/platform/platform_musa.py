@@ -147,6 +147,34 @@ class PlatformMUSA(PlatformBase):
             stream_cls.cuda_stream = property(lambda self: self.musa_stream)
             logger.debug("FlagCX stream.cuda_stream alias applied")
 
+    @staticmethod
+    def _patch_module_cuda() -> None:
+        """Redirect ``torch.nn.Module.cuda()`` and ``torch.Tensor.cuda()`` to the
+        MUSA device.
+
+        Third-party libraries like ``mbridge`` hardcode
+        ``model.cuda(torch.cuda.current_device())``.  We intercept the ``.cuda()``
+        method itself and redirect it to ``self.to("musa:...")``.
+
+        ``torch.cuda`` module is **not** patched here, so
+        ``torch.cuda.is_available()`` stays truthful on this platform and does not
+        trick Megatron-LM-FL's platform auto-detection.
+        """
+        musa = _get_musa_module()
+
+        def _musa_module_cuda(self, device=None, **kwargs):
+            if device is None:
+                device = musa.current_device()
+            if isinstance(device, int):
+                device = torch.device("musa", device)
+            return self.to(device, **{k: v for k, v in kwargs.items() if k != "non_blocking"})
+
+        if hasattr(torch.nn.Module, "cuda"):
+            torch.nn.Module.cuda = _musa_module_cuda
+        if hasattr(torch.Tensor, "cuda"):
+            torch.Tensor.cuda = _musa_module_cuda
+        logger.debug("Module.cuda / Tensor.cuda redirected to musa")
+
     def ensure_initialized(self) -> None:
         """Eagerly load ``torch_musa`` so that downstream libraries
         (``transformers``, ``accelerate``, ``flash_attn``, …) see a fully
@@ -158,5 +186,6 @@ class PlatformMUSA(PlatformBase):
         _get_musa_module() # ensure torch_musa is loaded
 
         PlatformMUSA._patch_flagcx_stream()
+        PlatformMUSA._patch_module_cuda()
 
         logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")
