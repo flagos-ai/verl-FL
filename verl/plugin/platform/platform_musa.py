@@ -133,21 +133,30 @@ class PlatformMUSA(PlatformBase):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _patch_flagcx_stream() -> None:
+        """Expose a ``cuda_stream`` property on ``torch.musa.Stream``.
+
+        FlagCX's ``adaptor_stream_copy`` hardcodes ``stream.cuda_stream``,
+        but MUSA streams use ``musa_stream``.  This alias keeps FlagCX
+        working without modifying its upstream sources.
+        """
+        musa = _get_musa_module()
+        stream_cls = getattr(musa, "Stream", None)
+        if stream_cls is not None and not hasattr(stream_cls, "cuda_stream"):
+            stream_cls.cuda_stream = property(lambda self: self.musa_stream)
+            logger.debug("FlagCX stream.cuda_stream alias applied")
+
     def ensure_initialized(self) -> None:
         """Eagerly load ``torch_musa`` so that downstream libraries
         (``transformers``, ``accelerate``, ``flash_attn``, …) see a fully
         initialised MUSA runtime when they are imported later.
 
-        Also patches ``torch.musa.Stream`` to expose a ``cuda_stream`` property
-        so that FlagCX's ``adaptor_stream_copy`` (which hardcodes ``cuda_stream``)
-        works transparently on MUSA devices.
+        Applies vendor-compatibility patches for third-party libraries that
+        hardcode CUDA-specific APIs.
         """
-        musa = _get_musa_module()
+        _get_musa_module() # ensure torch_musa is loaded
 
-        # FlagCX wrapper accesses stream.cuda_stream, but MUSA streams use
-        # musa_stream. Add a compatibility alias.
-        stream_cls = getattr(musa, "Stream", None)
-        if stream_cls is not None and not hasattr(stream_cls, "cuda_stream"):
-            stream_cls.cuda_stream = property(lambda self: self.musa_stream)
+        PlatformMUSA._patch_flagcx_stream()
 
         logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")
