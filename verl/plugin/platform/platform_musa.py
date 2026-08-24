@@ -383,6 +383,31 @@ class PlatformMUSA(PlatformBase):
 
         logger.debug("MUSA run_unvicorn patch applied")
 
+    @staticmethod
+    def _patch_attention_functions() -> None:
+        """Patch ``attention_utils`` to use ``npu_flash_attn_utils`` on MUSA.
+
+        ``verl.utils.attention_utils`` picks flash_attn (CUDA) vs
+        npu_flash_attn_utils (non-CUDA) inside ``_get_attention_functions``.
+        On MUSA we force the pure-torch npu_flash_attn_utils path.
+        """
+        try:
+            from verl.utils import attention_utils as _au
+            from verl.utils.npu_flash_attn_utils import (
+                index_first_axis,
+                pad_input,
+                rearrange,
+                unpad_input,
+            )
+        except ImportError:
+            return
+
+        def _musa_get_attention_functions():
+            return index_first_axis, pad_input, rearrange, unpad_input
+
+        _au._get_attention_functions = _musa_get_attention_functions
+        logger.debug("MUSA attention_utils patched to npu_flash_attn_utils")
+
     def ensure_initialized(self) -> None:
         """Eagerly load ``torch_musa`` so that downstream libraries
         (``transformers``, ``accelerate``, ``flash_attn``, …) see a fully
@@ -399,5 +424,6 @@ class PlatformMUSA(PlatformBase):
         PlatformMUSA._patch_sglang_torch()
         PlatformMUSA._patch_metrics_reduce()
         PlatformMUSA._patch_run_unvicorn()
+        PlatformMUSA._patch_attention_functions()
 
         logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")
