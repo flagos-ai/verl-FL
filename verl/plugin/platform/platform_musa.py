@@ -226,6 +226,44 @@ class PlatformMUSA(PlatformBase):
         _sglang_http._launch_subprocesses = _patched_launch_subprocesses
         logger.debug("SGLang _launch_subprocesses shim applied")
 
+    @staticmethod
+    def _patch_sglang_torch() -> None:
+        """Patch SGLang's ``patch_torch._device_to_uuid`` /
+        ``_device_from_maybe_uuid`` for MUSA.
+
+        Called from verl processes (e.g. WorkerDict weight-sync) where the
+        ``sglang_fl`` plugin may not be loaded.  The plugin covers SGLang
+        subprocesses (scheduler / tp-worker) via ``os.register_at_fork``;
+        this covers the verl side.
+        """
+        try:
+            import sglang.srt.utils.patch_torch as _pt
+        except ImportError:
+            return
+
+        _orig_to_uuid = _pt._device_to_uuid
+        _orig_from_uuid = _pt._device_from_maybe_uuid
+
+        def _patched_to_uuid(device: int) -> str:
+            try:
+                return _orig_to_uuid(device)
+            except AttributeError:
+                return str(device)
+
+        def _patched_from_uuid(device_maybe_uuid):
+            try:
+                return _orig_from_uuid(device_maybe_uuid)
+            except AttributeError:
+                if isinstance(device_maybe_uuid, int):
+                    return device_maybe_uuid
+                if isinstance(device_maybe_uuid, str):
+                    return int(device_maybe_uuid)
+                raise TypeError(f"Unknown type: {type(device_maybe_uuid)}")
+
+        _pt._device_to_uuid = _patched_to_uuid
+        _pt._device_from_maybe_uuid = _patched_from_uuid
+        logger.debug("MUSA patch_torch device_uuid patched (verl side)")
+
     def ensure_initialized(self) -> None:
         """Eagerly load ``torch_musa`` so that downstream libraries
         (``transformers``, ``accelerate``, ``flash_attn``, …) see a fully
@@ -239,5 +277,6 @@ class PlatformMUSA(PlatformBase):
         PlatformMUSA._patch_flagcx_stream()
         PlatformMUSA._patch_module_cuda()
         PlatformMUSA._patch_sglang_launch()
+        PlatformMUSA._patch_sglang_torch()
 
         logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")
