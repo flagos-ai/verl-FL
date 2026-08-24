@@ -318,6 +318,70 @@ class PlatformMUSA(PlatformBase):
                 _mod.reduce_metrics = _patched_reduce_metrics
 
         logger.debug("MUSA reduce_metrics CPU-move patch applied")
+    
+    @staticmethod
+    def _patch_run_unvicorn() -> None:
+        """Patch ``run_unvicorn`` to launch uvicorn via ``server.serve()``."""
+        import asyncio
+        import os
+        import sys
+
+        import uvicorn
+
+        try:
+            import verl
+            # ``verl.workers.rollout.__init__`` imports base/hf_rollout/naive,
+            # each of which does ``from verl import DataProto``.  This patch
+            # runs during ``verl/__init__.py`` (ensure_initialized), before
+            # ``DataProto`` is bound, so pre-bind it to let the rollout package
+            # import instead of failing silently.
+            if not hasattr(verl, "DataProto"):
+                from verl.protocol import DataProto
+
+                verl.DataProto = DataProto
+
+            from verl.workers.rollout import utils as _ru
+            from verl.workers.rollout.utils import get_free_port
+        except Exception as e:
+            logger.warning("MUSA run_unvicorn patch skipped: %s", e)
+            return
+
+        logger = _ru.logger  # reuse utils.py's logger so logs keep the same source
+
+        async def _patched_run_unvicorn(app, server_args, server_address, max_retries=5):
+            server_port, server_task = None, None
+
+            for i in range(max_retries):
+                try:
+                    server_port, sock = get_free_port(server_address)
+                    sock.close()
+                    app.server_args = server_args
+                    config = uvicorn.Config(app, host=server_address, port=server_port, log_level="warning")
+                    server = uvicorn.Server(config)
+                    server_task = asyncio.create_task(server.serve())
+                    break
+                except (OSError, SystemExit) as e:
+                    logger.error(f"Failed to start HTTP server on port {server_port} at try {i}, error: {e}")
+            else:
+                logger.error(f"Failed to start HTTP server after {max_retries} retries, exiting...")
+                os._exit(-1)
+
+            logger.info(f"HTTP server started on port {server_port}")
+            return server_port, server_task
+
+        _ru.run_unvicorn = _patched_run_unvicorn
+
+        # "from … import run_unvicorn" caches the reference at import time;
+        # update already-imported caller modules too.
+        for _mod_name in (
+            "verl.workers.rollout.vllm_rollout.vllm_async_server",
+            "verl.workers.rollout.sglang_rollout.async_sglang_server",
+        ):
+            _mod = sys.modules.get(_mod_name)
+            if _mod is not None:
+                _mod.run_unvicorn = _patched_run_unvicorn
+
+        logger.debug("MUSA run_unvicorn patch applied")
 
     def ensure_initialized(self) -> None:
         """Eagerly load ``torch_musa`` so that downstream libraries
@@ -334,5 +398,6 @@ class PlatformMUSA(PlatformBase):
         PlatformMUSA._patch_sglang_launch()
         PlatformMUSA._patch_sglang_torch()
         PlatformMUSA._patch_metrics_reduce()
+        PlatformMUSA._patch_run_unvicorn()
 
         logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")
