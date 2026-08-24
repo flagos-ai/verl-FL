@@ -916,9 +916,14 @@ class ActorRolloutRefWorker(MegatronWorker, DistProfilerExtension):
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def async_calls_finalize_fn_exec(self, blocking=False):
-        from megatron.core.dist_checkpointing.strategies.base import async_calls
+        try:
+            from megatron.core.dist_checkpointing.strategies.base import async_calls
 
-        async_calls.maybe_finalize_async_calls(blocking=blocking)
+            async_calls.maybe_finalize_async_calls(blocking=blocking)
+        except ImportError:
+            logger.warning(
+                "megatron.core.dist_checkpointing async_calls is not available, skip finalizing async calls."
+            )
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def start_profile(self, **kwargs) -> None:

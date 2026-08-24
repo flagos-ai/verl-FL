@@ -93,6 +93,13 @@ class SGLangHttpServer:
         self.node_rank = node_rank
         self.nnodes = nnodes
 
+        # Parse the first device ID so that SGLang starts from the correct
+        # physical GPU.  On CUDA this matches the default (0); on other
+        # platforms where Ray cannot propagate device visibility to child
+        # processes this ensures each replica uses its assigned GPUs.
+        if cuda_visible_devices:
+            self._base_gpu_id = int(cuda_visible_devices.split(",")[0])
+
         if self.rollout_mode != RolloutMode.HYBRID and self.config.load_format == "dummy":
             logger.warning(f"rollout mode is {self.rollout_mode}, load_format is dummy, set to auto")
             self.config.load_format = "auto"
@@ -157,7 +164,7 @@ class SGLangHttpServer:
             "mem_fraction_static": self.config.gpu_memory_utilization,
             "disable_cuda_graph": self.config.enforce_eager,
             "enable_memory_saver": True,
-            "base_gpu_id": 0,
+            "base_gpu_id": getattr(self, "_base_gpu_id", 0),
             "gpu_id_step": 1,
             "tp_size": self.config.tensor_model_parallel_size,
             "dp_size": self.config.data_parallel_size,
