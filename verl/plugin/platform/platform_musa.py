@@ -264,6 +264,61 @@ class PlatformMUSA(PlatformBase):
         _pt._device_from_maybe_uuid = _patched_from_uuid
         logger.debug("MUSA patch_torch device_uuid patched (verl side)")
 
+    @staticmethod
+    def _patch_metrics_reduce() -> None:
+        """Patch ``verl.utils.metric.utils.reduce_metrics`` to move tensors
+        to CPU before numpy operations — identical logic to the vendored
+        ``_to_cpu`` helper in that module.
+
+        Because ``reduce_metrics`` is imported by reference in several
+        modules (e.g. ``ray_trainer``), we also update the reference in
+        ``sys.modules`` where the caller has already been imported.
+        """
+        import sys
+
+        import torch
+
+        # -- copied from verl.utils.metric.utils._to_cpu ------------------
+        def _to_cpu(val):
+            if torch.is_tensor(val):
+                return val.detach().cpu()
+            if isinstance(val, (list, tuple)):
+                return type(val)(_to_cpu(v) for v in val)
+            if isinstance(val, dict):
+                return {k: _to_cpu(v) for k, v in val.items()}
+            return val
+
+        try:
+            from verl.utils.metric import utils as _mu
+        except ImportError:
+            logger.debug("verl.utils.metric.utils not available; skip metrics patch")
+            return
+
+        _orig_reduce = _mu.reduce_metrics
+
+        def _patched_reduce_metrics(metrics):
+            # Move tensors to CPU *before* numpy sees them.
+            for key in list(metrics.keys()):
+                metrics[key] = _to_cpu(metrics[key])
+            return _orig_reduce(metrics)
+
+        _mu.reduce_metrics = _patched_reduce_metrics
+
+        # The caller in ray_trainer holds a local "from … import reduce_metrics"
+        # reference; update it if the module has already been imported.
+        # Also update verl.utils.metric (the package __init__) because
+        # "from verl.utils.metric import reduce_metrics" resolves through it.
+        for _mod_name in (
+            "verl.trainer.ppo.ray_trainer",
+            "verl.utils.metric",
+            "verl.utils.metric.utils",
+        ):
+            _mod = sys.modules.get(_mod_name)
+            if _mod is not None:
+                _mod.reduce_metrics = _patched_reduce_metrics
+
+        logger.debug("MUSA reduce_metrics CPU-move patch applied")
+
     def ensure_initialized(self) -> None:
         """Eagerly load ``torch_musa`` so that downstream libraries
         (``transformers``, ``accelerate``, ``flash_attn``, …) see a fully
@@ -278,5 +333,6 @@ class PlatformMUSA(PlatformBase):
         PlatformMUSA._patch_module_cuda()
         PlatformMUSA._patch_sglang_launch()
         PlatformMUSA._patch_sglang_torch()
+        PlatformMUSA._patch_metrics_reduce()
 
         logger.debug("torch_musa initialised by PlatformMUSA.ensure_initialized()")
