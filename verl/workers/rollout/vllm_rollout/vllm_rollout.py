@@ -82,6 +82,11 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 if is_version_ge(pkg="vllm", minver="0.7.3"):
     VLLMHijack.hijack()
 
+# vllm 0.20 removed EngineCore.execute_method and changed the
+# CoreEngineProcManager / WorkerWrapperBase signatures; this guard switches the
+# adaptations in vllm_rollout.py and vllm_async_server.py (verl-FL #19).
+_VLLM_GE_0_20 = vs.parse(get_version("vllm") or "0") >= vs.parse("0.20.0")
+
 
 def _check_vllm_version_for_sleep_level():
     # https://github.com/vllm-project/vllm/issues/25171
@@ -211,7 +216,11 @@ class vLLMAsyncRollout(BaseRollout):
                 # Will remove the patch after vllm support on-the-fly quant for rollout natively.
                 apply_vllm_fp8_patches()
 
-        self.inference_engine = WorkerWrapperBase(vllm_config=self.vllm_config)
+        if _VLLM_GE_0_20:
+            # vllm 0.20 dropped the vllm_config argument from WorkerWrapperBase.
+            self.inference_engine = WorkerWrapperBase()
+        else:
+            self.inference_engine = WorkerWrapperBase(vllm_config=self.vllm_config)
         self.inference_engine.init_worker(all_kwargs)
 
     def _load_model(self, *args, **kwargs):
@@ -231,6 +240,13 @@ class vLLMAsyncRollout(BaseRollout):
             return self._init_worker(*args, **kwargs)
         elif method == "load_model":
             return self._load_model(*args, **kwargs)
+        elif method == "init_device" and _VLLM_GE_0_20:
+            # vllm 0.20 workers run methods directly; execute_method is gone.
+            return self.inference_engine.init_device()
+        elif _VLLM_GE_0_20:
+            from vllm.v1.serial_utils import run_method
+
+            return run_method(self.inference_engine.worker, method, args, kwargs)
         else:
             return self.inference_engine.execute_method(method, *args, **kwargs)
 

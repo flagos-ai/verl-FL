@@ -44,6 +44,7 @@ from vllm.v1.engine.utils import CoreEngineProcManager
 from vllm.v1.executor.abstract import Executor
 
 from verl.single_controller.ray import RayClassWithInitArgs
+from verl.third_party.vllm import get_version
 from verl.utils.config import omega_conf_to_dataclass
 from verl.utils.vllm.vllm_fp8_utils import apply_vllm_fp8_patches
 from verl.workers.config import HFModelConfig, RolloutConfig
@@ -75,6 +76,11 @@ if _VLLM_VERSION >= version.parse("0.12.0"):
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
+
+# vllm 0.20 removed EngineCore.execute_method and changed the
+# CoreEngineProcManager / WorkerWrapperBase signatures; this guard switches the
+# adaptations in vllm_rollout.py and run_headless below (verl-FL #19).
+_VLLM_GE_0_20 = version.parse(get_version("vllm") or "0") >= version.parse("0.20.0")
 
 
 class ExternalZeroMQDistributedExecutor(Executor):
@@ -195,7 +201,14 @@ class vLLMHttpServerBase:
 
         self.config: RolloutConfig = omega_conf_to_dataclass(config)
         self.model_config: HFModelConfig = omega_conf_to_dataclass(model_config, dataclass_type=HFModelConfig)
-        self.config.max_model_len = self.model_config.hf_config.max_position_embeddings
+        if _VLLM_GE_0_20:
+            # vllm 0.20 propagates rollout.max_model_len into vllm_config; an
+            # explicit value is honoured instead of being unconditionally
+            # overridden by hf_config.max_position_embeddings.
+            if self.config.max_model_len is None:
+                self.config.max_model_len = self.model_config.hf_config.max_position_embeddings
+        else:
+            self.config.max_model_len = self.model_config.hf_config.max_position_embeddings
         self.rollout_mode = rollout_mode
         self.workers = workers
 
@@ -444,9 +457,10 @@ class vLLMHttpServerBase:
         port = engine_args.data_parallel_rpc_port  # add to config too
         handshake_address = get_tcp_uri(host, port)
 
-        # Create the engines.
-        self.engine_manager = CoreEngineProcManager(
-            target_fn=EngineCoreProc.run_engine_core,
+        # vllm 0.20 removed the target_fn argument from CoreEngineProcManager;
+        # the engine proc's run_engine_core target is hardwired there. Older
+        # vllm still requires it.
+        engine_manager_kwargs: dict[str, Any] = dict(
             local_engine_count=local_engine_count,
             start_index=vllm_config.parallel_config.data_parallel_rank,
             local_start_index=0,
@@ -456,6 +470,9 @@ class vLLMHttpServerBase:
             executor_class=Executor.get_class(vllm_config),
             log_stats=not engine_args.disable_log_stats,
         )
+        if not _VLLM_GE_0_20:
+            engine_manager_kwargs["target_fn"] = EngineCoreProc.run_engine_core
+        self.engine_manager = CoreEngineProcManager(**engine_manager_kwargs)
 
     async def generate(
         self,
