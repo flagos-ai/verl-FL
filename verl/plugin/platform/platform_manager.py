@@ -20,7 +20,7 @@ _current_platform: PlatformBase | None = None
 
 # Built-in platform names that are auto-detected.  Third-party backends can
 # be added via ``set_platform()`` without modifying this list.
-_BUILTIN_PLATFORMS = ("cuda", "npu", "musa", "cpu")
+_BUILTIN_PLATFORMS = ("cuda", "npu", "musa", "supa", "cpu")
 
 
 def _detect_platform_name() -> str:
@@ -40,7 +40,17 @@ def _detect_platform_name() -> str:
             logger.info("Platform override from VERL_PLATFORM=%s", env_name)
             return env_name
 
-    # 2. Auto-detect Moore Threads MUSA  (must come before CUDA because
+    # 2. Auto-detect Biren SUPA
+    try:
+        import torch
+        import torch_supa  # noqa: F401 – registers torch.supa
+
+        if hasattr(torch, "supa") and callable(getattr(torch.supa, "is_available", None)) and torch.supa.is_available():
+            return "supa"
+    except (ImportError, RuntimeError, AttributeError):
+        pass
+
+    # 3. Auto-detect Moore Threads MUSA  (must come before CUDA because
     #    torch_musa patches torch.cuda to return True on MUSA devices)
     try:
         import torch
@@ -103,6 +113,17 @@ def _create_platform(name: str) -> PlatformBase:
         platform = PlatformMUSA()
         if not platform.is_available():
             logger.warning("MUSA platform specified but not available. Falling back to CPU.")
+            from .platform_cpu import PlatformCPU
+
+            return PlatformCPU()
+        return platform
+
+    if name == "supa":
+        from .platform_supa import PlatformSUPA
+
+        platform = PlatformSUPA()
+        if not platform.is_available():
+            logger.warning("SUPA platform specified but not available. Falling back to CPU.")
             from .platform_cpu import PlatformCPU
 
             return PlatformCPU()

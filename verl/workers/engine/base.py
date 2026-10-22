@@ -303,6 +303,9 @@ class EngineRegistry:
         assert backend in cls._engines[model_type], f"Unknown backend: {backend}"
         device = get_device_name()
         # TODO: use a more robust way to determine device type when multiple devices platform are supported.
+        if device not in cls._engines[model_type][backend] and "cuda" in cls._engines[model_type][backend]:
+            # Platforms exposing a CUDA-compatible API (e.g. SUPA) reuse the CUDA engine.
+            device = "cuda"
         if os.getenv("VERL_ENGINE_DEVICE", "0").lower() == "flagos":
             device = "flagos"
         assert device in cls._engines[model_type][backend], (
